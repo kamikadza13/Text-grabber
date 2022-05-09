@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import glob
 import os
 import shutil
@@ -574,4 +576,4 @@ if file_exists('loadFolders.xml'):
             version.remove(re)
     tree1.write('_Translation/loadFolders.xml')
 
-
+input("Press Enter to exit")
