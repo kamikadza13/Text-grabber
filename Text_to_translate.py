@@ -12,7 +12,8 @@ from os.path import isfile as isfile
 
 global exitString
 global folder
-
+global exitString1
+global list_of_forbidden_character_in_label1
 Class_replace = [("QuestNode_", ""), ("CompProperties_", "Comp_"), ("ScenPart_", "")]
 
 listOfNumbers = "'0'"
@@ -340,7 +341,9 @@ else:
     if not os.path.exists('_Translation'):
         os.makedirs('_Translation')
     shutil.copy(src_path, dst_path)
-    tree1 = ET.parse('loadFolders.xml')
+    with open('loadFolders.xml', 'r') as xml_file:
+        tree1 = ET.parse(xml_file)
+    # tree1 = ET.parse('loadFolders.xml')
     root1 = tree1.getroot()
     # ET.dump(root1)
     # Папки перевода из loadFolders.xml
@@ -482,7 +485,9 @@ print("--Начало чтения из файлов--")
 for fl_idx, fil in enumerate(files_to_translate):
     try:
         print("     Чтение из " + fil)
-        tree = ET.parse(fil)
+        with open(fil, 'r') as xml_file:
+            tree = ET.parse(xml_file)
+        # tree = ET.parse(fil)
         print("File:  " + files_to_translate_name[fl_idx])
 
         root = tree.getroot()
@@ -532,8 +537,10 @@ for fl_idx, fil in enumerate(files_to_translate):
         # print('\n'.Folder_and_text_1[0])
         # print('\n'.join(Folder_and_text_1[1]))
     except ET.ParseError:
-        print("|||--ERROR--|||      " + "Лажа в тексте файла    " + fil)
+        print("|||--ERROR--|||      " + "Error in file:     " +
+              fil.partition("_Translation/")[2].replace("Defs_to_translate", "Defs"))
         print("Пропуск файла")
+        input("Press Enter to continue")
         print("--------------------------------------")
         pass
 
@@ -550,7 +557,9 @@ delete_empty_folders(root2)
 Проверка loadFolders на наличие папок
 """
 if file_exists('loadFolders.xml'):
-    tree1 = ET.parse('loadFolders.xml')
+    with open('loadFolders.xml', 'r') as xml_file:
+        tree1 = ET.parse(xml_file)
+    # tree1 = ET.parse('loadFolders.xml')
     root1 = tree1.getroot()
     # ET.dump(root1)
     # Папки перевода из loadFolders.xml
@@ -576,4 +585,43 @@ if file_exists('loadFolders.xml'):
             version.remove(re)
     tree1.write('_Translation/loadFolders.xml')
 
+# for path, subdirs, files in os.walk("Patches"):
+#     for name in files:
+#         patch_fullname = os.path.join(path, name)
+#
+#
+#
+# def patch_strings(elem, elem_path=""):
+#     global exitString1
+#     global list_of_forbidden_character_in_label1
+#     for child in elem:
+#         if not list(child) and child.text:
+#             # print(child.tag)
+#             if any(child.tag != d for d in list_of_forbidden_tags):  # Проверка запрещенных тэгов
+#                 if any(child.tag == a for a in list_of_labels_list):  # Проверка на соответствие списку тэгов
+#                     adding_in_string(exitString, elem_path, child)
+#                 elif any(child.tag == b for b in listOfNumbers):  # Проверка, что последний тэг - <li> (точнее
+#                     # порядковый номер <li>)
+#                     if any(a in elem_path.rpartition('/')[2] for a in list_of_path):
+#                         # Проверка последнего тэга перед ли, если в списке, то печатать
+#                         adding_in_string(exitString, elem_path, child)
+#                 elif any(b in child.tag for b in list_of_tags):  # Проверка на не полный тэг
+#                     adding_in_string(exitString, elem_path, child)
+#         else:
+#             replace_defname(child)
+#             replace_child_li(child, list_of_forbidden_character_in_label)
+#             print_path_of_elems(child, "%s/%s" % (elem_path, child.tag))
+#
+#
+#
+#
+# for paf in patch_fullname:
+#     pass
+#     tree = ET.parse(paf)
+#     Folder_and_text_1 = finish_string(tree)
+# os.system("pause")
+# input()
+print("----------------------------------------------")
+print("All done")
 input("Press Enter to exit")
+
