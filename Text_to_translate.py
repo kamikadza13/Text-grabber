@@ -341,7 +341,7 @@ else:
     if not os.path.exists('_Translation'):
         os.makedirs('_Translation')
     shutil.copy(src_path, dst_path)
-    with open('loadFolders.xml', 'r') as xml_file:
+    with open('loadFolders.xml', 'r', encoding="utf-8") as xml_file:
         tree1 = ET.parse(xml_file)
     # tree1 = ET.parse('loadFolders.xml')
     root1 = tree1.getroot()
@@ -485,7 +485,7 @@ print("--Начало чтения из файлов--")
 for fl_idx, fil in enumerate(files_to_translate):
     try:
         print("     Чтение из " + fil)
-        with open(fil, 'r') as xml_file:
+        with open(fil, 'r', encoding="utf-8") as xml_file:
             tree = ET.parse(xml_file)
         # tree = ET.parse(fil)
         print("File:  " + files_to_translate_name[fl_idx])
@@ -525,7 +525,7 @@ for fl_idx, fil in enumerate(files_to_translate):
             file_path_plus_name = file_path1 + "/" + file_name1 + ".xml"
             print("New name/path:" + file_path_plus_name)
             os.makedirs(file_path1, exist_ok=True)
-            Write_file = open(file_path_plus_name, "w")
+            Write_file = open(file_path_plus_name, "w", encoding="utf-8")
             print("\n".join(text))
             # print("Вывод в:      " + file_path1 + "/DefInjected/" + f1 + "/")
             for l1 in text:
@@ -557,7 +557,7 @@ delete_empty_folders(root2)
 Проверка loadFolders на наличие папок
 """
 if file_exists('loadFolders.xml'):
-    with open('loadFolders.xml', 'r') as xml_file:
+    with open('loadFolders.xml', 'r', encoding="utf-8") as xml_file:
         tree1 = ET.parse(xml_file)
     # tree1 = ET.parse('loadFolders.xml')
     root1 = tree1.getroot()
