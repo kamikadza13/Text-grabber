@@ -29,7 +29,7 @@ list_of_labels_list = ["label", "labelNoun", "labelPlural", "text", "description
                        "ingestReportString", "outOfFuelMessage",
                        "name", "summary", 'pawnSingular', 'pawnsPlural',  #
                        "reportString"]  # Список Тэгов для вывода в печать
-list_of_tags = ["Message", "Label", "label", "Title", "Text"]
+list_of_tags = ["Message", "Label", "label", "Title", "Text", "gerund", "Gerund"]
 # Список неполных тэгов
 # Этот список ищется в Тэге (например, "Message" в <outOfFuelMessage> должно найтись)
 
@@ -624,4 +624,3 @@ if file_exists('loadFolders.xml'):
 print("----------------------------------------------")
 print("All done")
 input("Press Enter to exit")
-
