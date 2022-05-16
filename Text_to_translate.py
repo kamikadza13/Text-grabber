@@ -27,13 +27,14 @@ new_list = []
 list_of_labels_list = ["label", "labelNoun", "labelPlural", "text", "description", "jobString", "desc",
                        "customLabel", "customLetterLabel", "customLetterText", "ingestCommandString",
                        "ingestReportString", "outOfFuelMessage",
-                       "name", "summary", 'pawnSingular', 'pawnsPlural',  #
+                       "name", "summary", 'pawnSingular', 'pawnsPlural', 'adjective', 'ideoName', 'member', 'type',  #
                        "reportString"]  # Список Тэгов для вывода в печать
-list_of_tags = ["Message", "Label", "label", "Title", "Text", "gerund", "Gerund"]
+list_of_tags = ["Message", "Label", "label", "Title", "Text", "gerund", "Gerund", "Explanation"]
 # Список неполных тэгов
 # Этот список ищется в Тэге (например, "Message" в <outOfFuelMessage> должно найтись)
 
-list_of_path = ["rulesStrings", "customLetterText", "thoughtStageDescriptions"]  # Список Тэгов перед <li> для вывода
+list_of_path = ["rulesStrings", "customLetterText", "thoughtStageDescriptions", "symbolPacks"]
+# Список Тэгов перед <li> для вывода
 """
 например:
 <li Class="PreceptComp_SituationalThought">				
@@ -46,6 +47,7 @@ list_of_path = ["rulesStrings", "customLetterText", "thoughtStageDescriptions"] 
 """
 list_of_forbidden_tags = ['defaultLabelColor']  # Список запрещенных для вывода тэгов
 list_of_folders_to_translate = ['Common', '/']  # Список папок для поиска Defs и Languages и т.д.
+Error_log = []
 Language = ""
 Autor = ""
 Name_add = ""
@@ -114,13 +116,6 @@ def find_new_path_for_li(child):
             element = "li"
         else:
             element = element.text
-        # for forbidden in forbidden_character:  # Список запрещенных символов в имени
-        #     a1 = element
-        #     if not isinstance(a1, str):
-        #         if a1.text.find(forbidden) == -1:
-        #             element = element.text
-        #         else:
-        #             element = "li"
     if element == "":
         element = "li"
     return element
@@ -129,10 +124,15 @@ def find_new_path_for_li(child):
 def adding_in_string(stringa, elem_path, child):
     text1 = child.text
     text1 = html.escape(text1, quote=False)
+    # print(elem_path)
+    # print(elem_path.count("/"))
+    if elem_path.count("/") < 2:  # Проверка пути, есть ли там, что-то кроме tag
+        return None
     if elem_path.rpartition('/')[0] == "comps":
         stringa.append("%s/%s,%s" % (elem_path, "", text1))
     else:
         stringa.append("%s/%s,%s" % (elem_path, child.tag, text1))
+        # print("%s/%s,%s" % (elem_path, child.tag, text1))
 
 
 def replace_defname(child):
@@ -141,7 +141,21 @@ def replace_defname(child):
         child.tag = child.tag + "/" + a1.text
 
 
-def print_path_of_elems(elem, elem_path=""):
+def find_parentName_desc(child, root4):  # Добавление в наследников label из родителя в файле
+    if 'ParentName' in child.attrib:
+        pn = child.attrib['ParentName']
+        for c1 in root4:
+            if 'Name' in c1.attrib:
+                if c1.attrib['Name'] == pn:
+                    # print("Найдено совпадение " + pn + " и " + c1.tag)
+                    for lab in list_of_labels_list:
+                        for c2 in c1:
+                            if c2.tag == lab:
+                                if child.find(lab) is None:
+                                    child.append(c2)
+
+
+def print_path_of_elems(elem, root3, elem_path=""):
     global exitString
     for child in elem:
         if not list(child) and child.text:
@@ -157,9 +171,10 @@ def print_path_of_elems(elem, elem_path=""):
                 elif any(b in child.tag for b in list_of_tags):  # Проверка на не полный тэг
                     adding_in_string(exitString, elem_path, child)
         else:
+            find_parentName_desc(child, root3)
             replace_defname(child)
             replace_child_li(child)
-            print_path_of_elems(child, "%s/%s" % (elem_path, child.tag))
+            print_path_of_elems(child, root3, "%s/%s" % (elem_path, child.tag))
 
 
 def finish_string(tree2):
@@ -168,7 +183,7 @@ def finish_string(tree2):
     root_finish_string = tree2.getroot()
     exitString = []
     folder = []
-    print_path_of_elems(root_finish_string)
+    print_path_of_elems(root_finish_string, root_finish_string)
 
     string = exitString
     # # """
@@ -517,6 +532,12 @@ for idx, p_ in enumerate(pathes_to_DeftoTranslate):
 print("---------------------------------------------------------------------------------------------------------")
 print("--Начало чтения из файлов--")
 
+
+def Error_parse_error(name):
+    Error_log.append("Ошибка чтения " + name)
+
+
+
 for fl_idx, fil in enumerate(files_to_translate):
     try:
         print("     Чтение из " + fil)
@@ -574,15 +595,25 @@ for fl_idx, fil in enumerate(files_to_translate):
     except ET.ParseError:
         print("|||--ERROR--|||      " + "Error in file:     " +
               fil.partition("_Translation/")[2].replace("Defs_to_translate", "Defs"))
+        Error_parse_error(fil.partition("_Translation/")[2].replace("Defs_to_translate", "Defs")
+                          .replace("Languages/" + Language + "/", ""))
+        # Error_log.append("Ошибка чтения" + fil.partition("_Translation/")[2].replace("Defs_to_translate", "Defs"))
         print("Пропуск файла")
-        input("Press Enter to continue")
+        # input("Press Enter to continue")
         print("--------------------------------------")
         pass
 
-for p1 in pathes_to_DeftoTranslate:
-    # print("Удаление папки:")
-    # print(p1)
-    shutil.rmtree(p1)
+
+
+def Error_delete_path_def_to_trans(func, pathz, _):
+    Error_log.append("Ошибка удаления " + str(func) + " " + str(pathz) + " " + str(_))
+
+
+pathes_to_DeftoTranslate1 = set(pathes_to_DeftoTranslate)
+for p1 in pathes_to_DeftoTranslate1:
+    # Error_log.append("Путь к удалению " + p1)
+    shutil.rmtree(p1, ignore_errors=False, onerror=Error_delete_path_def_to_trans)
+
 print("--------------------------------------")
 root2 = '_Translation'
 print("Удаление пустых папок")
@@ -594,37 +625,33 @@ delete_empty_folders(root2)
 if file_exists('loadFolders.xml'):
     with open('loadFolders.xml', 'r', encoding="utf-8") as xml_file:
         tree1 = ET.parse(xml_file)
-    # tree1 = ET.parse('loadFolders.xml')
     root1 = tree1.getroot()
-    # ET.dump(root1)
-    # Папки перевода из loadFolders.xml
     pathes = []
     removable_element = []
     for version in root1:
-        for fold in version:
-            if any(x == fold.text + "/" for x in pathes):
+        # ET.dump(version)
+        for li in reversed(version):
+            # ET.dump(li)
+            if li.text == "/":
+                # print("Пропуск _Translation/" + li.text)
                 pass
             else:
-                txt = (fold.text if fold.text != "/" else "")
-                if txt != "":
-                    if file_exists("_Translation/" + txt):
-                        pass
-                        # print("_Translation/" + txt + " существует")
-                    else:
-                        # print("_Translation/" + txt + " НЕ существует")
-                        removable_element.append(fold)
+                # print("Папка существует =" + str(file_exists("_Translation/" + li.text)))
+                if not file_exists("_Translation/" + li.text):
+                    print("Папка не существует _Translation/" + li.text + "\n Удаление")
+                    version.remove(li)
+                # else:
+                #     # print("Папка существует _Translation/" + li.text)
+                #     pass
 
-            # print("-----------")
-    for version in reversed(root1):
-        for re in removable_element:
-            version.remove(re)
+
+    #         version.remove(re)
     tree1.write('_Translation/loadFolders.xml')
 
 print("----------------------------------------------")
 print("----------------------------------------------")
 print("----------------------------------------------")
 print("Copy patches")
-
 
 full_path_to_label_patch = []
 patch_fullname = []
@@ -634,7 +661,6 @@ for dirpath, subdirs, files in os.walk("."):
     for x in subdirs:
         if x == "Patches":
             shpfiles.append((dirpath + "/" + x).replace("\\", "/").replace("./", ""))
-
 
 for s in shpfiles:
     for path, subdirs, files in os.walk(s):
@@ -663,8 +689,6 @@ for idx, a in enumerate(full_path_to_label_patch):
     shutil.copy(src_path, dst_path)
     print('Copied')
 
-
-
 s1_path = "About/preview.png"
 d_path = "_Translation/About"
 os.makedirs(d_path, exist_ok=True)
@@ -690,7 +714,10 @@ with open('_Translation/About/About.xml', 'w', encoding="utf-8") as about:
     about.write("\t" + '<description>' + Description + " " + name + '</description>' + "\n")
     about.write('</ModMetaData>')
 
+with open('_Translation/Error_log.txt', 'w', encoding="utf-8") as about:
+    for el in Error_log:
+        about.write(el + "\n")
 
 print("----------------------------------------------")
 print("All done")
-input("Press Enter to exit")
+# input("Press Enter to exit")
