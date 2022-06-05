@@ -1,4 +1,0 @@
-Language=Russian
-Autor=Kamikadza13
-Name_add=rus
-Description=Translation of
