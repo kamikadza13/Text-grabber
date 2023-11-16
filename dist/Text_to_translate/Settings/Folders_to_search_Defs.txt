@@ -1,3 +1,0 @@
-Common
-/
-_Patches_to_translate

@@ -1,7 +1,0 @@
-Texture
-colorChannels
-foodType
-showMessageIfOwned
-labelUsedInLogging
-texPath
-developmentalStageFilter
