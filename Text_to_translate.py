@@ -1211,6 +1211,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
     printy('Reading Files... Done', '<o')
     print()
 
+
     printy('Writing Files...', 'c')
     for fl_idx, fil in enumerate(files_to_translate):
         try:
