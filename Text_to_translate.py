@@ -66,7 +66,7 @@ def exit_prog():
     os._exit(0)
 
 def escape_printy_string(string):
-    a = escape(string).replace('[', r'\[').replace(']', r'\]')
+    a = escape(str(string)).replace('[', r'\[').replace(']', r'\]')
     return a
 
 
