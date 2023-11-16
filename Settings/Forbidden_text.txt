@@ -1,0 +1,9 @@
+True
+False
+true
+false
+asker
+askerIsNull
+siteThreatChance
+Mote
+mote

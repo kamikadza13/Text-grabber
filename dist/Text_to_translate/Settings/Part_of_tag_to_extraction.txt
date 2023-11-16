@@ -1,0 +1,10 @@
+Message
+Label
+label
+Title
+Text
+gerund
+Gerund
+Explanation
+title
+description
