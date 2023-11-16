@@ -46,6 +46,8 @@ import win32con
 import win32api
 import win32gui
 
+Version_of_Text_grabber = "1.2.7"
+
 global exitString
 global folder
 global exitString1
@@ -77,7 +79,6 @@ text_startwith_skip = ['RGB', r'\$', ]
 
 dont_close_console_after_end = False
 
-Version_of_Text_grabber = "1.2.6"
 
 Parent_Name_list = []
 Parent_Name_list_that_has_parent = []
@@ -986,6 +987,7 @@ def make_about_folder():
 
 
     name = root3.find("name").text
+    description = root3.find("description").text
     packageId = root3.find("packageId").text
     New_Name = New_Name.replace("~MOD_NAME~", name)
     supportedVersions = get_supportedVersions()
@@ -1004,7 +1006,7 @@ def make_about_folder():
 			<steamWorkshopUrl>{mod_url}</steamWorkshopUrl>
 		</li>
 	""" if Add_mod_Dependence else ""
-    new_desc = Description.replace("~MOD_NAME~", name).replace("~MOD_URL~", mod_url)
+    new_desc = Description.replace("~MOD_NAME~", name).replace("~MOD_DESCRIPTION~", description).replace("~MOD_URL~", mod_url)
     about_text = f'''<ModMetaData>
 	<name>{New_Name}</name>
 	<author>{Author}</author>

@@ -943,6 +943,10 @@ class TestApp(ttk.Toplevel):
 
         self.AboutFrame.F1.right.Description = ttk.Text(self.AboutFrame.F1.right, height=10)
         self.AboutFrame.F1.right.Description.pack(padx=(5, 5), pady=(0, 5))
+        self.AboutFrame.F1.right.Description.ToolTip = ToolTip(self.AboutFrame.F1.right.Description, text=_(
+            '~MOD_NAME~ will be replaced with the name of the original mod\n'
+            '~MOD_DESCRIPTION~ will be replaced with the original mod description\n'
+            '~MOD_URL~ will be replaced with the original mod URL'), wraplength=500)
 
         def Description_callback(*_):
             SettingsValues.Description = self.AboutFrame.F1.right.Description.get(1.0, ttk.END)
@@ -1039,7 +1043,7 @@ class TestApp(ttk.Toplevel):
 		</li>""" if SettingsValues.Add_mod_Dependence == True else ""}
 	</modDependencies>
 	<loadAfter>example1.example2</loadAfter>
-	<description>{SettingsValues.Description.replace("~MOD_NAME~", "Example mod")}</description>
+	<description>{SettingsValues.Description.replace("~MOD_NAME~", "Example mod").replace("~MOD_DESCRIPTION~", "ORIGINAL MOD DESCRIPTION...").replace("~MOD_URL~", "https://steamcommunity.com/sharedfiles/filedetails/?id=0000000000")}</description>
 </ModMetaData>'''
             self.AboutFrame.F2.about_example.delete(1.0, ttk.END)
             self.AboutFrame.F2.about_example.insert(1.0, text)
@@ -1554,9 +1558,9 @@ if __name__ == '__main__':
 
 
 # pybabel extract -o locale/T_test.pot Text_grabber_settings.py
-# pybabel init -D T_test -i locale/T_test.pot -d po -l ru
-# pybabel init -D T_test -i locale/T_test.pot -d po -l en
-# pybabel update -D T_test -i locale/T_test.pot -d po -l ru
-# pybabel update -D T_test -i locale/T_test.pot -d po -l en
+# pybabel init -D T_test -i locale/T_test.pot -d locale -l ru
+# pybabel init -D T_test -i locale/T_test.pot -d locale -l en
+# pybabel update -D T_test -i locale/T_test.pot -d locale -l ru
+# pybabel update -D T_test -i locale/T_test.pot -d locale -l en
 # pybabel compile -D T_test -i locale\ru\LC_MESSAGES\T_test.po -o locale\ru\LC_MESSAGES\T_test.mo
 # pybabel compile -D T_test -i locale\en\LC_MESSAGES\T_test.po -o locale\en\LC_MESSAGES\T_test.mo

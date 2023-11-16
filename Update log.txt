@@ -1,5 +1,8 @@
 Update log
 
+Update 1.2.7
+	Added ~MOD_DESCRIPTION~ replacing as well as ~MOD_NAME~ and ~MOD_URL~ into About.xml generation
+
 Update 1.2.6
 	Fix printy output
 	
