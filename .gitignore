@@ -3,3 +3,4 @@ __pycache__/
 build/
 dist/
 Translate_updater_xml_old_to_new/
+.idea/workspace.xml
