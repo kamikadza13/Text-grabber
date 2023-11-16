@@ -74,7 +74,7 @@ def escape_printy_string(string):
 tag_endwith_skip = ['/nodes/Set/name', ]
 text_startwith_skip = ['RGB', r'\$', ]
 
-rename__Translation_into_modname = True
+
 dont_close_console_after_end = False
 
 Version_of_Text_grabber = "1.2.6"
@@ -1519,18 +1519,21 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
         Error_log.append(f"Error delete_empty_folders {ex} \n\n")
         printy(fr"[r]\[ERROR\]@ delete_empty_folders {escape_printy_string(str(ex))} \n\n", predefined='<m')
 
-    if rename__Translation_into_modname:
+
+    try:
         shutil.rmtree(New_Name, ignore_errors=True)
         shutil.copytree("_Translation",
                         sanitize_filename(New_Name), dirs_exist_ok=True)
         shutil.rmtree('_Translation', ignore_errors=True)
+    except Exception as ex:
+        Error_log.append(f"Error rename _Translation {ex} \n\n")
+        printy(fr"[r]\[ERROR\]@ rename _Translation {escape_printy_string(str(ex))} \n\n", predefined='<m')
+
+
 
     if Error_log:
         printy(r"[r]\[ERROR\]@ Need error log --> [r]Opening Error_log.txt@", predefined='<m')
-        # print(Error_log)
-        _Tr = '_Translation'
-        if rename__Translation_into_modname:
-            _Tr = New_Name
+        _Tr = New_Name
         os.makedirs(_Tr, exist_ok=True)
         with open(fr'{_Tr}\\Error_log.txt', 'w', encoding="utf-8") as er_log:
             for el in Error_log:
