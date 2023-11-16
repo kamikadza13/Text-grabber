@@ -1235,6 +1235,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
             if Folders:
                 # print()
                 printy(f"File: [y>]{fil}@")
+                
 
             # print("Начало разбивания файла на папки")
             for f1 in Folders:
