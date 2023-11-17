@@ -1815,5 +1815,5 @@ if __name__ == '__main__':
     run_gui()
 
 
-# pyinstaller --noconfirm Text_to_translate.spec
+# pyinstaller --noconfirm Text_Grabber.spec
 
