@@ -416,7 +416,7 @@ def adding_in_string(stringa, elem_path: str, child: ET.Element, print_now: bool
                     stringa.append("%s/%s,%s" % (elem_path, child.tag, text1))
             print(f"Skipping string {elem_path + '/' + child.tag : <75} text: ", end='')
             printy(escape_printy_string(text1), 'r>', end=' ')
-            printy(f"[r]Just one word with Underlining '_'@")
+            printy(f"[<r]- Just one word with Underlining@")
             return None
     for ft in Forbidden_text:
         if text1 == ft:
@@ -1237,7 +1237,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                     Folders.append(f[0])
             if Folders:
                 # print()
-                printy(f"File: [y>]{fil}@")
+                printy(f"File: [y>]{escape_printy_string(fil)}@")
 
 
             # print("Начало разбивания файла на папки")
@@ -1251,7 +1251,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                 file_path_plus_name = file_path1 + "/" + file_name1 + ".xml"
                 # print("New name/path:" + file_path_plus_name.partition('_Translation/')[2])
 
-                printy(f'Folder: [y<]{f1: <20}@  File: [y<]{file_full_path}@ --> [<y]{file_path_plus_name.partition("_Translation/")[2]}@')
+                printy(f'Folder: [y<]{f1: <20}@  File: [y<]{escape_printy_string(file_full_path)}@ --> [<y]{file_path_plus_name.partition("_Translation/")[2]}@')
 
                 if file_exists(file_path_plus_name):
                     with open(file_path_plus_name, "r", encoding="utf-8") as Write_file:
@@ -1331,7 +1331,8 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
                 # print("     End of Folder       ")
                 # print("----------------------------")
-            print()
+            if Folders:
+                print()
             # print('\n'.Folder_and_text_1[0])
             # print('\n'.join(Folder_and_text_1[1]))
         except ET.ParseError:
