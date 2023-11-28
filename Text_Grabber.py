@@ -1307,13 +1307,14 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                     def find_defname(index):
                         if index > len(text_body):
                             return None
-                        find = None
+
                         for a in text_body[index:]:
                             if "<!--" not in a:
-                                find = re.match(r"^\s*<(\w+?)\.", a).group(1)
-                            if find:
-                                return find
-                        return find
+                                find = match(r"^\s*<(\S+?)\.", a)
+                                if find:
+                                    return find.group(1)
+                        else:
+                            return None
 
                     now_def_nm = None
                     next_def_nm = None
