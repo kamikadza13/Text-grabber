@@ -1,6 +1,6 @@
 Update log
 
-Update 1.3.0
+Update 1.3.0 
 	The settings have been moved to AppData/Roaming !!!
 	Added Add_new_line_next_defname_treshhold in settings
 
