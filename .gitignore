@@ -1,7 +1,7 @@
 .idea/
-__pycache__/
 build/
 dist/
+__pycache__/
 Translate_updater_xml_old_to_new/
 Translate_updater_xml_old_to_new.py
 Patch_grabber.py
