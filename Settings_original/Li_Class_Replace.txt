@@ -1,2 +1,0 @@
-QuestNode_=
-ScenPart_=

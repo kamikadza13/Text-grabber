@@ -5,31 +5,28 @@ import shutil
 import sys
 import tkinter as tk
 from ctypes import windll
+from dataclasses import dataclass
 from tkinter import PhotoImage
 from tkinter import filedialog
+from varname import varname
+import appdirs
+from os.path import exists as file_exists
 
 import ttkbootstrap as ttk
 from ttkbootstrap.dialogs.dialogs import Messagebox
 from ttkbootstrap.tooltip import ToolTip
+from result import Result, Ok, Err, is_err, is_ok
 
 import locale
 import image_edit
 
 
+Window_Text_grabber: ttk.Window
+Window_Hidden: ttk.Toplevel
+Window_settings_app: ttk.Toplevel
+
+
 current_locale, encoding = locale.getdefaultlocale()
-
-class SettingsPath:
-    Tags_to_extraction = r"Settings\\Tags_to_extraction.txt"
-    Part_of_tag_to_extraction = r"Settings\\Part_of_tag_to_extraction.txt"
-    Tags_before_li = r"Settings\\Tag_before_li.txt"
-
-    Forbidden_tag = r"Settings\\Forbidden_tags.txt"
-    Forbidden_part_of_tag = r"Settings\\Forbidden_part_of_tag.txt"
-    Forbidden_part_of_path = r"Settings\\Forbidden_part_of_path.txt"
-
-    Forbidden_text = r"Settings\\Forbidden_tags.txt"
-    Li_Class_Replace = r"Settings\\Li_Class_Replace.txt"
-    Folders_to_search = r"Settings\\Folders_to_search_Defs.txt"
 
 
 class WindowSettings:
@@ -62,7 +59,6 @@ language_changed = False
 
 
 
-# ttk.themes.standard['darkly']['colors']['primary'] =  "#375a7f"
 class ToolTipImage(ToolTip):
     def __init__(self, widget, text=None, bootstyle=None, wraplength=None, delay=250, image=None, **kwargs):
         super().__init__(widget, text, bootstyle, wraplength, delay, **kwargs)
@@ -101,146 +97,171 @@ class ToolTipImage(ToolTip):
                 lbl_label.configure(style="tooltip.TLabel")
 
 
-General_settings_path = 'Settings\\Settings.ini'
 config = configparser.RawConfigParser(allow_no_value=True)
 config.optionxform = str
 
+class OriginalSettingsFileText:
+    A1_Settings = '''[General]
+Settings_language = en
+Game_language = Russian
+Path_to_Data = D:/Games/steamapps/common/RimWorld/Data
+Path_to_Mod_folder = D:/Games/steamapps/workshop/content/294100
+Path_to_Another_folder = None
+Delete_old_versions_translation = True
+Merge_folders = True
+Not_rename_files = False
 
-class SettingsValues:
-    #   [General]
-    Settings_language = _('En')
-    Game_language = 'Russian'
+[Comment]
+Add_filename_comment = True
+Add_comment = True
+Comment_add_EN = False
+Comment_starting_similar_as_ogiganal_text = True
+Comment_spacing_before_tag = False
+Comment_replace_n_as_new_line = False
 
-    Path_to_Data = _('None')
-    Path_to_Mod_folder = _('None')
-    Path_to_Another_folder = _('None')
+[Grabbing]
+Check_at_least_one_letter_in_text = True
+add_titleFemale = True
+add_titleShortFemale = True
+Add_stuffAdjective_and_mark_it = True
+Add_stuffAdjective_and_mark_it_text = Adjective ~LABEL~
+labelPlural = True
+labelMale = False
+labelFemale = False
+labelMalePlural = False
+labelFemalePlural = False
+tags_left_spacing = "	"
+Add_new_line_next_defname = True
+Add_new_line_next_defname_treshhold = True
+Tkey_system_on = True
 
-    Delete_old_versions_translation = True
-    Merge_folders = True
-    Not_rename_files = False
+[About.xml]
+Author = Kamikadza13
+New_Name = ~MOD_NAME~ rus
+Add_mod_Dependence = True
 
-    #   [Comments]
-    Add_filename_comment = True
-    Add_comment = True
-    Comment_add_EN = True
-    Comment_starting_similar_as_ogiganal_text = True
-    Comment_spacing_before_tag = False
-    Comment_replace_n_as_new_line = True
+[Preview]
+Image_on_Preview = True
+Position = Top right
+Offset_x = 0
+Offset_y = 0'''
+    A2_Description = '''Перевод ~MOD_NAME~
 
-    #  [Grabbing]
-    Add_stuffAdjective_and_mark_it = True
-    Add_stuffAdjective_and_mark_it_text = 'Adjective ~LABEL~'
+~MOD_DESCRIPTION~
+~MOD_URL~
 
-    Check_at_least_one_letter_in_text = False
-    add_titleFemale = True
-    add_titleShortFemale = True
-    Tkey_system_on = True
+Если вы заметили что-то не переведенное, то напишите об этом в комментариях под переводом ^_^
 
-    tags_left_spacing = "	"
-    Add_new_line_next_defname = True
+Также мой перевод кучи мелких QOL модов
+QOL rus
+https://steamcommunity.com/sharedfiles/filedetails/?id=2791163039
+(зайдите посмотрите, там много вкусного)'''
 
-    labelPlural = True
-    labelMale = False
-    labelFemale = False
-    labelMalePlural = False
-    labelFemalePlural = False
+    E1_Tags_to_extraction = '''label
+labelNoun
+labelPlural
+text
+description
+jobString
+desc
+customLabel
+customLetterLabel
+customLetterText
+ingestCommandString
+ingestReportString
+outOfFuelMessage
+name
+summary
+pawnSingular
+pawnsPlural
+adjective
+ideoName
+member
+theme
+; type
+reportString
+; Добавил:
+stuffAdjective
+deathMessage
+letterText
+slateRef
+text
+title
+titleshort
+verb
+commandDesc
+commandLabel
+baseInspectLine
+leaderTitle
+structureLabel'''
+    E2_Part_of_tag_to_extraction = '''Message
+Label
+label
+Title
+Text
+gerund
+Gerund
+Explanation
+title
+description'''
+    E3_Tag_before_li = '''rulesStrings
+rulesFiles
+customLetterText'''
 
+    F1_Forbidden_tags = '''defaultLabelColor
+thingClass
+only
+developmentalStageFilter
+context
+count
+value
+offset
+volume
+drawSize
+wornGraphicPath
+labelKey
+messageTypeDef
+texturePath
+explanationKeyAbstract
+texture
+allowedDevelopmentalStages'''
+    F2_Forbidden_part_of_tag = '''Texture
+colorChannels
+foodType
+showMessageIfOwned
+labelUsedInLogging
+texPath
+developmentalStageFilter'''
+    F3_Forbidden_part_of_path = '''colorChannels
+shadowData'''
+    F4_Forbidden_text = '''True
+False
+true
+false
+asker
+askerIsNull
+siteThreatChance
+Mote
+mote'''
 
+    O1_Li_Class_Replace = '''QuestNode_=
+ScenPart_='''
 
-    #  [About.xml]
-    Author = 'Kamikadza13'
-    New_Name = '~MOD_NAME~ rus'
-    Add_mod_Dependence = True
-    Description = ''
-
-    #  [Preview]
-    Image_on_Preview = True
-    Position = 'UL'
-    Offset_x = 0
-    Offset_y = 0
-
-
-def settings_config_update_write():
-    with open(General_settings_path, 'w') as aaa:
-        config.write(aaa)
-
-
-def settings_config_read(parent1: ttk.Window | ttk.Toplevel | tk.Tk | tk.Toplevel):
-    try:
-        config.read(General_settings_path, "utf8")
-
-
-    except Exception as ex:
-        def settings_read_error():
-            print('Settings read Error')
-            Messagebox.show_error(parent=parent1, alert=True,
-                                  message=_(f"Can't read settings! Restoring default settings..."))
-
-        parent1.after(1000, settings_read_error)
-        config.read(r'Settings_original\\Settings.ini', "utf8")
-        shutil.copy(r'Settings_original\\Settings.ini', General_settings_path)
-        config.read(General_settings_path, "utf8")
-
-    SettingsValues.Settings_language = config.get('General', 'Settings_language')
-    SettingsValues.Game_language = config.get('General', 'Game_language')
-    SettingsValues.Path_to_Data = config.get('General', 'Path_to_Data')
-    SettingsValues.Path_to_Mod_folder = config.get('General', 'Path_to_Mod_folder')
-    SettingsValues.Path_to_Another_folder = config.get('General', 'Path_to_Another_folder')
-    SettingsValues.Delete_old_versions_translation = config.getboolean('General', 'Delete_old_versions_translation')
-    SettingsValues.Merge_folders = config.getboolean('General', 'Merge_folders')
-    SettingsValues.Not_rename_files = config.getboolean('General', 'Not_rename_files')
-
-    SettingsValues.Add_filename_comment = config.getboolean('Comment', 'Add_filename_comment')
-    SettingsValues.Add_comment = config.getboolean('Comment', 'Add_comment')
-    SettingsValues.Comment_add_EN = config.getboolean('Comment', 'Comment_add_EN')
-    SettingsValues.Comment_starting_similar_as_ogiganal_text = config.getboolean('Comment',
-                                                                                 'Comment_starting_similar_as_ogiganal_text')
-    SettingsValues.Comment_spacing_before_tag = config.getboolean('Comment', 'Comment_spacing_before_tag')
-    SettingsValues.Comment_replace_n_as_new_line = config.getboolean('Comment', 'Comment_replace_n_as_new_line')
-
-    SettingsValues.Check_at_least_one_letter_in_text = config.getboolean('Grabbing',
-                                                                         'Check_at_least_one_letter_in_text')
-    SettingsValues.add_titleFemale = config.getboolean('Grabbing', 'add_titleFemale')
-    SettingsValues.add_titleShortFemale = config.getboolean('Grabbing', 'add_titleShortFemale')
-    SettingsValues.Add_stuffAdjective_and_mark_it = config.getboolean('Grabbing', 'Add_stuffAdjective_and_mark_it')
-    SettingsValues.Add_stuffAdjective_and_mark_it_text = config.get('Grabbing',
-                                                                    'Add_stuffAdjective_and_mark_it_text')
-    SettingsValues.labelPlural = config.getboolean('Grabbing', 'labelPlural')
-    SettingsValues.labelMale = config.getboolean('Grabbing', 'labelMale')
-    SettingsValues.labelFemale = config.getboolean('Grabbing', 'labelFemale')
-    SettingsValues.labelMalePlural = config.getboolean('Grabbing', 'labelMalePlural')
-    SettingsValues.labelFemalePlural = config.getboolean('Grabbing', 'labelFemalePlural')
-    SettingsValues.tags_left_spacing = config.get('Grabbing', 'tags_left_spacing').strip('"')
-    SettingsValues.Add_new_line_next_defname = config.getboolean('Grabbing', 'Add_new_line_next_defname')
-    SettingsValues.Tkey_system_on = config.getboolean('Grabbing', 'Tkey_system_on')
-
-    SettingsValues.Author = config.get('About.xml', 'Author')
-    SettingsValues.New_Name = config.get('About.xml', 'New_Name')
-    SettingsValues.Add_mod_Dependence = config.getboolean('About.xml', 'Add_mod_Dependence')
-
-    with open(r'Settings\\Description.txt', encoding="utf8") as desc:
-        SettingsValues.Description = desc.read().strip(" \n")
-
-    SettingsValues.Image_on_Preview = config.getboolean('Preview', 'Image_on_Preview')
-    SettingsValues.Position = config.get('Preview', 'Position')
-    SettingsValues.Offset_x = config.getint('Preview', 'Offset_x')
-    SettingsValues.Offset_y = config.getint('Preview', 'Offset_y')
-
-    if SettingsValues.Settings_language == 'ru':
-        ru_i18n.install()
-    else:
-        en_i18n.install()
 
 
 class TestApp(ttk.Toplevel):
 
     def __init__(self, master_widget):
+        global Window_settings_app
+        Window_settings_app = self
 
         ttk.Toplevel.__init__(self, master=master_widget)
-        self.protocol("WM_DELETE_WINDOW", exit_app)
-        settings_config_read(self)
+        self.protocol("WM_DELETE_WINDOW", self.exit_app)
+        update_settings_new(Window_Text_grabber, Window_Hidden, Window_settings_app)
         a = self.style
         a.theme_use('darkly')
+
+
 
         self.Title_frame = ttk.Frame(self)
         self.Title_frame.pack(side=tk.TOP, fill=tk.X)
@@ -251,7 +272,7 @@ class TestApp(ttk.Toplevel):
         # Pack the close button to the right-most side
 
         self.Title_close_btn = tk.Button(self.Title_frame, text='x', bd=0, width=2, font=WindowSettings.font1,
-                                         command=exit_app, bg=WindowSettings.Title_bg, takefocus=0)
+                                         command=self.exit_app, bg=WindowSettings.Title_bg, takefocus=0)
 
         self.Title_close_btn.pack(side=tk.RIGHT)
         self.languages = ['English', 'Русский']
@@ -282,7 +303,8 @@ class TestApp(ttk.Toplevel):
             settings_config_update_write()
             global language_changed
             language_changed = True
-            restart_app(self)
+            Window_settings_app.destroy()
+            run_settings_app()
 
         self.Title_language_selector.bind("<<ComboboxSelected>>", Title_language_selector_selected)
         self.Title_language_selector.current(1 if SettingsValues.Settings_language == 'ru' else 0)
@@ -362,14 +384,14 @@ class TestApp(ttk.Toplevel):
             SettingsValues.Path_to_Data = a if a else 'None'
             config.set("General", "Path_to_Data", SettingsValues.Path_to_Data)
             settings_config_update_write()
-            self.General_Settings_frame.Frame3.Label['text'] = _(f"Rimworld Data:\n{SettingsValues.Path_to_Data}")
+            self.General_Settings_frame.Frame3.Label['text'] = _("Rimworld Data:\n{Path_to_Data}").format(Path_to_Data=SettingsValues.Path_to_Data)
 
         self.General_Settings_frame.Frame3.Path_to_Data = ttk.Button(self.General_Settings_frame.Frame3,
                                                                      text=_("Select path to Rimworld Data"), width=50,
                                                                      command=Frame3_Path_to_Data_select_path)
         self.General_Settings_frame.Frame3.Path_to_Data.pack(expand=False, fill=tk.X, side='left')
         self.General_Settings_frame.Frame3.Label = ttk.Label(self.General_Settings_frame.Frame3,
-                                                             text=_(f"Rimworld Data:\n{SettingsValues.Path_to_Data}"),
+                                                             text=_("Rimworld Data:\n{Path_to_Data}").format(Path_to_Data=SettingsValues.Path_to_Data),
                                                              wraplength=500)
         self.General_Settings_frame.Frame3.Label.pack(padx=(20, 20), anchor='nw')
 
@@ -382,14 +404,14 @@ class TestApp(ttk.Toplevel):
             config.set("General", "Path_to_Mod_folder", SettingsValues.Path_to_Mod_folder)
             settings_config_update_write()
             self.General_Settings_frame.Frame4.Label['text'] = _(
-                f"Rimworld Mods Folder:\n{SettingsValues.Path_to_Mod_folder}")
+                "Rimworld Mods Folder:\n{Path_to_Mod_folder}").format(Path_to_Mod_folder=SettingsValues.Path_to_Mod_folder)
 
         self.General_Settings_frame.Frame4.Path_to_Mod = ttk.Button(self.General_Settings_frame.Frame4,
                                                                     text=_("Select path to Rimworld Mods Folder"),
                                                                     width=50, command=Frame4_Path_to_Mod_select_path)
         self.General_Settings_frame.Frame4.Path_to_Mod.pack(expand=False, fill=tk.X, side='left')
         self.General_Settings_frame.Frame4.Label = ttk.Label(self.General_Settings_frame.Frame4, text=_(
-            f"Rimworld Mods Folder:\n{SettingsValues.Path_to_Mod_folder}"), wraplength=500)
+            "Rimworld Mods Folder:\n{Path_to_Mod_folder}").format(Path_to_Mod_folder=SettingsValues.Path_to_Mod_folder), wraplength=500)
         self.General_Settings_frame.Frame4.Label.pack(padx=(20, 20), anchor='nw')
 
         self.General_Settings_frame.Frame5 = ttk.Frame(self.General_Settings_frame.Pathes_to_Rimworld_frame)
@@ -401,7 +423,7 @@ class TestApp(ttk.Toplevel):
             config.set("General", "Path_to_Another_folder", SettingsValues.Path_to_Another_folder)
             settings_config_update_write()
             self.General_Settings_frame.Frame5.Label['text'] = _(
-                f"Another Rimworld Mods Folder:\n{SettingsValues.Path_to_Another_folder}")
+                "Another Rimworld Mods Folder:\n{Path_to_Another_folder}").format(Path_to_Another_folder=SettingsValues.Path_to_Another_folder)
 
         self.General_Settings_frame.Frame5.Path_to_Another_folder = ttk.Button(self.General_Settings_frame.Frame5,
                                                                                text=_(
@@ -410,7 +432,7 @@ class TestApp(ttk.Toplevel):
                                                                                command=Frame5_Path_to_Another_folder_select_path)
         self.General_Settings_frame.Frame5.Path_to_Another_folder.pack(expand=False, fill=tk.X, side='left')
         self.General_Settings_frame.Frame5.Label = ttk.Label(self.General_Settings_frame.Frame5, text=_(
-            f"Another Rimworld Mods Folder:\n{SettingsValues.Path_to_Another_folder}"), wraplength=500)
+            "Another Rimworld Mods Folder:\n{Path_to_Another_folder}").format(Path_to_Another_folder=SettingsValues.Path_to_Another_folder), wraplength=500)
         self.General_Settings_frame.Frame5.Label.pack(padx=(20, 20), anchor='nw')
         self.General_Settings_frame.Frame5.Path_to_Another_folder.ToolTip = ToolTip(
             self.General_Settings_frame.Frame5.Path_to_Another_folder,
@@ -904,7 +926,10 @@ class TestApp(ttk.Toplevel):
         def callback_Add_new_line_next_defname():
             SettingsValues.Add_new_line_next_defname = bool(self.Add_new_line_next_defname.get())
             config.set("Grabbing", "Add_new_line_next_defname", str(SettingsValues.Add_new_line_next_defname))
+
             settings_config_update_write()
+
+            self.GrabFrame.Next_Frame_inside.Add_new_line_next_defname_treshhold.configure(state='normal' if self.Add_new_line_next_defname.get() else 'disabled')
 
         self.Add_new_line_next_defname = ttk.BooleanVar(value=SettingsValues.Add_new_line_next_defname)
         self.GrabFrame.Next_Frame_inside.Add_new_line_next_defname = ttk.Checkbutton(self.GrabFrame.Next_Frame_inside,
@@ -922,9 +947,30 @@ class TestApp(ttk.Toplevel):
             image=self.GrabFrame.Next_Frame_inside.Add_new_line_next_defname.ToolTip_image,
             text=_("Divide the text into blocks by Defname"))
 
+        def callback_Add_new_line_next_defname_treshhold():
+            SettingsValues.Add_new_line_next_defname_treshhold = bool(self.Add_new_line_next_defname_treshhold.get())
+            config.set("Grabbing", "Add_new_line_next_defname_treshhold", str(SettingsValues.Add_new_line_next_defname_treshhold))
+            settings_config_update_write()
+
+
+        self.Add_new_line_next_defname_treshhold = ttk.BooleanVar(value=SettingsValues.Add_new_line_next_defname_treshhold)
+
+        self.GrabFrame.Next_Frame_inside.Add_new_line_next_defname_treshhold = ttk.Checkbutton(self.GrabFrame.Next_Frame_inside,
+                                                                                     text=_(
+                                                                                         "Threshold for adding an empty line"),
+                                                                                     variable=self.Add_new_line_next_defname_treshhold,
+                                                                                     command=callback_Add_new_line_next_defname_treshhold,
+                                                                                     state='normal' if self.Add_new_line_next_defname.get() else 'disabled')
+        self.GrabFrame.Next_Frame_inside.Add_new_line_next_defname_treshhold.pack(anchor=tk.W, pady=(5, 0), padx=10)
+
+        self.GrabFrame.Next_Frame_inside.Add_new_line_next_defname_treshhold.ToolTip = ToolTip(
+            self.GrabFrame.Next_Frame_inside.Add_new_line_next_defname_treshhold,
+            text=_("Empty lines will be added if there are many lines with the same defname in the file. (If the number of different defnames is less than half of all strings.)"))
+
         # -- About SETTINGS FRAME
         # -- ----------------------
         # -- ----------------------
+        #
         # -- ----------------------
         # -- ----------------------
         # -- ----------------------
@@ -950,7 +996,7 @@ class TestApp(ttk.Toplevel):
 
         def Description_callback(*_):
             SettingsValues.Description = self.AboutFrame.F1.right.Description.get(1.0, ttk.END)
-            with open(r"Settings\\Description.txt", 'w', encoding='utf8') as desc_file:
+            with open(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Description, 'w', encoding='utf8') as desc_file:
                 desc_file.write(SettingsValues.Description.strip(" \n"))
             about_example_update()
 
@@ -981,7 +1027,7 @@ class TestApp(ttk.Toplevel):
         self.AboutFrame.F1.fl1.New_name_label = ttk.Labelframe(self.AboutFrame.F1.fl1, text=_("New Name"))
         self.AboutFrame.F1.fl1.New_name_label.pack(anchor='nw', side='left', padx=5)
 
-        self.New_Name = ttk.StringVar(value=SettingsValues.New_Name)
+        self.New_Name = ttk.StringVar(value=SettingsValues.New_Name_before_replace)
 
         self.AboutFrame.F1.fl1.New_name_Entry = ttk.Entry(self.AboutFrame.F1.fl1.New_name_label,
                                                           textvariable=self.New_Name, width=32)
@@ -990,13 +1036,13 @@ class TestApp(ttk.Toplevel):
             '~MOD_NAME~ will be replaced with the name of the original mod.'))
 
         def New_Name_Entry_callback(*_):
-            SettingsValues.New_Name = self.New_Name.get()
+            SettingsValues.New_Name_before_replace = self.New_Name.get()
             config.set("About.xml", "New_Name",
-                       str(SettingsValues.New_Name))
-            if '~MOD_NAME~' not in SettingsValues.New_Name:
+                       str(SettingsValues.New_Name_before_replace))
+            if '~MOD_NAME~' not in SettingsValues.New_Name_before_replace:
                 self.New_Name.set("~MOD_NAME~")
                 self.AboutFrame.F1.fl1.New_name_Entry.icursor(10)
-                SettingsValues.New_Name = self.New_Name.get()
+                SettingsValues.New_Name_before_replace = self.New_Name.get()
             settings_config_update_write()
             about_example_update()
 
@@ -1028,7 +1074,7 @@ class TestApp(ttk.Toplevel):
             self.AboutFrame.F2.about_example.configure(state='normal')
 
             text = f'''<ModMetaData>
-	<name>{SettingsValues.New_Name.replace("~MOD_NAME~", "Example mod")}</name>
+	<name>{SettingsValues.New_Name_before_replace.replace("~MOD_NAME~", "Example mod")}</name>
 	<author>{SettingsValues.Author}</author>
 	<packageId>{SettingsValues.Author}.example1</packageId>
 	<supportedVersions>
@@ -1075,7 +1121,7 @@ class TestApp(ttk.Toplevel):
         self.Preview.F_right.a2 = ttk.Frame(self.Preview.F_right, )
         self.Preview.F_right.a2.pack(expand=True, side='left', fill=ttk.BOTH)
 
-        self.Position = ttk.StringVar(value=SettingsValues.Position)
+        self.Position = ttk.StringVar(value=SettingsValues.Position_of_image)
 
         self.Preview.R_top = ttk.Frame(self.Preview.F_right.a2, padding=(10, 10, 0, 10))
         self.Preview.R_top.pack(expand=True, fill=ttk.BOTH)
@@ -1114,8 +1160,8 @@ class TestApp(ttk.Toplevel):
         self.Preview.R_bot.BR.pack(side='right', fill=ttk.BOTH, expand=True)
 
         def Position_callback(*_):
-            SettingsValues.Position = self.Position.get()
-            config.set("Preview", "Position", SettingsValues.Position)
+            SettingsValues.Position_of_image = self.Position.get()
+            config.set("Preview", "Position", SettingsValues.Position_of_image)
             settings_config_update_write()
             Preview_image_chage()
 
@@ -1183,21 +1229,21 @@ class TestApp(ttk.Toplevel):
 
         numeric_validate = (self.register(Numeric_str))
 
-        self.Offset_x = ttk.StringVar(value=str(SettingsValues.Offset_x))
+        self.Offset_x = ttk.StringVar(value=str(SettingsValues.Position_of_image_Offset_x))
 
         def Offset_callback(*_):
             if self.Offset_x.get() == '':
-                SettingsValues.Offset_x = 0
+                SettingsValues.Position_of_image_Offset_x = 0
             else:
-                SettingsValues.Offset_x = int(self.Offset_x.get())
+                SettingsValues.Position_of_image_Offset_x = int(self.Offset_x.get())
 
             if self.Offset_y.get() == '':
-                SettingsValues.Offset_y = 0
+                SettingsValues.Position_of_image_Offset_y = 0
             else:
-                SettingsValues.Offset_y = int(self.Offset_y.get())
+                SettingsValues.Position_of_image_Offset_y = int(self.Offset_y.get())
 
-            config.set("Preview", "Offset_x", str(SettingsValues.Offset_x))
-            config.set("Preview", "Offset_y", str(SettingsValues.Offset_y))
+            config.set("Preview", "Offset_x", str(SettingsValues.Position_of_image_Offset_x))
+            config.set("Preview", "Offset_y", str(SettingsValues.Position_of_image_Offset_y))
             settings_config_update_write()
             Preview_image_chage()
 
@@ -1213,7 +1259,7 @@ class TestApp(ttk.Toplevel):
         self.Preview.F_left.F2_Offset_y.Label = ttk.Label(self.Preview.F_left.F2_Offset_y, text=_("y Offset"))
         self.Preview.F_left.F2_Offset_y.Label.pack(side='top')
 
-        self.Offset_y = ttk.StringVar(value=str(SettingsValues.Offset_y))
+        self.Offset_y = ttk.StringVar(value=str(SettingsValues.Position_of_image_Offset_y))
         self.Offset_y.trace_add('write', Offset_callback)
 
         self.Preview.F_left.F2_Offset_y.Entry = ttk.Entry(self.Preview.F_left.F2_Offset_y, textvariable=self.Offset_y)
@@ -1235,8 +1281,8 @@ class TestApp(ttk.Toplevel):
 
                 image_edit.add_custom_labe_on_preview(r"Images\\Preview\\Preview_origianl.png",
                                                       r"Images\\Preview\\New_Image.png",
-                                                      self.Position.get(), SettingsValues.Offset_x,
-                                                      SettingsValues.Offset_y).save(
+                                                      self.Position.get(), SettingsValues.Position_of_image_Offset_x,
+                                                      SettingsValues.Position_of_image_Offset_y).save(
                     r'Images\\Preview\\Preview_updated.png')
 
                 self.Preview_image_updated = PhotoImage(file=r'Images\\Preview\\Preview_updated.png')
@@ -1266,7 +1312,7 @@ class TestApp(ttk.Toplevel):
         self.af.top.left.pack(expand=True, fill=ttk.BOTH, side='left', padx=(0, 5))
 
         self.af.top.left.btn1 = ttk.Button(self.af.top.left, text=_("Tags to extraction"),
-                                           command=lambda: os.startfile(SettingsPath.Tags_to_extraction))
+                                           command=lambda: os.startfile(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Tags_to_extraction))
         self.af.top.left.btn1.pack(padx=10, pady=10)
         self.af.top.left.btn1.tooltip = ToolTip(self.af.top.left.btn1, wraplength=1000, text=_(
             '<Tags> to be extracted for translation, for example, if you want to extract "anima heart" from \n'
@@ -1274,7 +1320,7 @@ class TestApp(ttk.Toplevel):
             'then the list of tags to extract should be "label"'))
 
         self.af.top.left.btn2 = ttk.Button(self.af.top.left, text=_("Part of tag to extraction"),
-                                           command=lambda: os.startfile(SettingsPath.Part_of_tag_to_extraction))
+                                           command=lambda: os.startfile(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Part_of_tag_to_extraction))
         self.af.top.left.btn2.pack(padx=10, pady=10)
         self.af.top.left.btn2.tooltip = ToolTip(self.af.top.left.btn2, wraplength=1000, text=_(
             'If you need to extract all <tags> that have a common part, for example, all <tags> with "Message". Such as:\n'
@@ -1284,7 +1330,7 @@ class TestApp(ttk.Toplevel):
             'Case-sensitive'))
 
         self.af.top.left.btn3 = ttk.Button(self.af.top.left, text=_("Tags before <li>"),
-                                           command=lambda: os.startfile(SettingsPath.Tags_before_li))
+                                           command=lambda: os.startfile(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Tags_before_li))
         self.af.top.left.btn3.pack(padx=10, pady=10)
         self.af.top.left.btn3.tooltip = ToolTip(self.af.top.left.btn3, wraplength=1000, text=_(
             'A list of <tags> that are in front of a set of consecutive <li> that need to be output\nlike:'
@@ -1303,7 +1349,7 @@ class TestApp(ttk.Toplevel):
         self.af.top.right.pack(expand=True, fill=ttk.BOTH, side='left', padx=(5, 0))
 
         self.af.top.right.btn1 = ttk.Button(self.af.top.right, text=_("Forbidden tags"),
-                                            command=lambda: os.startfile(SettingsPath.Forbidden_tag))
+                                            command=lambda: os.startfile(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Forbidden_tag))
         self.af.top.right.btn1.pack(padx=10, pady=10)
         self.af.top.right.btn1.tooltip = ToolTip(self.af.top.right.btn1, wraplength=1000, text=_(
             "<Tags> that will not be extracted. Usually you don't need to add much here, but if the program constantly extracts something superfluous, then it makes sense to prohibit the extraction of the tag in any way\n"
@@ -1313,7 +1359,7 @@ class TestApp(ttk.Toplevel):
             "Because this line is very similar to normal text, which it would be desirable to extract because there are spaces in it, <tag> should be banned."))
 
         self.af.top.right.btn2 = ttk.Button(self.af.top.right, text=_("Forbidden part of tag"),
-                                            command=lambda: os.startfile(SettingsPath.Forbidden_part_of_tag))
+                                            command=lambda: os.startfile(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Forbidden_part_of_tag))
         self.af.top.right.btn2.pack(padx=10, pady=10)
         self.af.top.right.btn2.tooltip = ToolTip(self.af.top.right.btn2, wraplength=1000, text=_(
             'If you need to prohibit extraction of all <tags> that have a common part,'
@@ -1324,7 +1370,7 @@ class TestApp(ttk.Toplevel):
             'Case-sensitive'))
 
         self.af.top.right.btn3 = ttk.Button(self.af.top.right, text=_("Forbidden part of path"),
-                                            command=lambda: os.startfile(SettingsPath.Forbidden_part_of_path))
+                                            command=lambda: os.startfile(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Forbidden_part_of_path))
         self.af.top.right.btn3.pack(padx=10, pady=10)
         self.af.top.right.btn3.tooltip = ToolTip(self.af.top.right.btn3, wraplength=1000, text=_(
             'If you need to prohibit all tags that have a common part of the path: So for\n'
@@ -1340,7 +1386,7 @@ class TestApp(ttk.Toplevel):
             'And you can prohibit, for example, /degreeDatas/li/'))
 
         self.af.top.right.btn4 = ttk.Button(self.af.top.right, text=_("Forbidden text"),
-                                            command=lambda: os.startfile(SettingsPath.Forbidden_text))
+                                            command=lambda: os.startfile(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Forbidden_text))
         self.af.top.right.btn4.pack(padx=10, pady=10)
         self.af.top.right.btn4.tooltip = ToolTip(self.af.top.right.btn4, wraplength=800, text=_(
             "Sometimes it is necessary to prohibit not the <Tag> but the text. For example, all sorts of true false can sometimes be extracted by the program\n"
@@ -1358,7 +1404,7 @@ class TestApp(ttk.Toplevel):
         self.af.top2.left.pack(side='left')
 
         self.af.top2.left.btn1 = ttk.Button(self.af.top2.left, text=_("<li> class replace"),
-                                            command=lambda: os.startfile(SettingsPath.Li_Class_Replace))
+                                            command=lambda: os.startfile(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Li_Class_Replace))
         self.af.top2.left.btn1.pack(padx=10, pady=10)
         self.af.top2.left.btn1.tooltip = ToolTip(self.af.top2.left.btn1, wraplength=800, text=_(
             'Sometimes TranslationReport wants some <li> to be replaced not with numbers, but with text, depending on "li Class=" for example:\n'
@@ -1374,13 +1420,7 @@ class TestApp(ttk.Toplevel):
             '<Letter.label>Quest expired<Letter.label>\n'
             'And the game takes the "Letter" from the <li> class, so I added the replacement of QuestNode_ with an empty string'))
 
-        self.af.top2.left.btn2 = ttk.Button(self.af.top2.left, text=_("Folders to search"),
-                                            command=lambda: os.startfile(SettingsPath.Folders_to_search))
-        self.af.top2.left.btn2.pack(padx=10, pady=10)
-        self.af.top2.left.btn2.tooltip = ToolTip(self.af.top2.left.btn2, wraplength=800, text=_(
-            'Folders in which the program will search for folders with the extracted text. In 1.4,\n'
-            'there is only one such folder (not counting folders with the version number) this is "Common".\n'
-            '"\\" added so that the game searches for folders in the root folder of the mod (do not delete it)'))
+
 
         self.Top_Notebook.add(self.General_Settings_frame, text=_('General Settings'))
         self.Top_Notebook.add(self.CommFrame, text=_('Comments'))
@@ -1389,10 +1429,14 @@ class TestApp(ttk.Toplevel):
         self.Top_Notebook.add(self.Preview, text=_('Preview'))
         self.Top_Notebook.add(self.Advanced_Frame, text=_('Advanced settings'))
 
-        self.after(1, lambda: self.Top_Notebook.focus_set())
-        self.Top_Notebook.select(0)
 
+
+        self.after(1, lambda: self.Top_Notebook.focus_set())
+        self.raise_tab(0)
         self.geometry("1000x800+200+200")
+
+    def raise_tab(self, idx):
+        self.Top_Notebook.select(idx)
 
     def start_move(self, event):
         """ change the (x, y) coordinate on mousebutton press and hold motion """
@@ -1436,131 +1480,563 @@ class TestApp(ttk.Toplevel):
         """ function to deiconify or window """
         self.overrideredirect(True)
 
+    def exit_app(self):
+        Window_Hidden.destroy()
 
-def set_appwindow(root):
-    GWL_EXSTYLE = -20
-    WS_EX_APPWINDOW = 0x00040000
-    WS_EX_TOOLWINDOW = 0x00000080
-    hwnd = windll.user32.GetParent(root.winfo_id())
-    style = windll.user32.GetWindowLongPtrW(hwnd, GWL_EXSTYLE)
-    style = style & ~WS_EX_TOOLWINDOW
-    style = style | WS_EX_APPWINDOW
-    res = windll.user32.SetWindowLongPtrW(hwnd, GWL_EXSTYLE, style)
-    root.wm_withdraw()
-    root.after(10, lambda: root.wm_deiconify())
+        if language_changed:
+            Window_Text_grabber.destroy()
+        else:
+            Window_Text_grabber.deiconify()
 
 
-def restart_app(r=None):
-    if r:
-        r.destroy()
-
-    r = TestApp(hidden_window)
-
-    r.overrideredirect(True)
-    r.after(10, lambda: set_appwindow(root=r))
-
-    r.mainloop()
+class SettingsValues:
+    class SettingsPath:
+        Prog_name = 'Text_grabber'
 
 
-hidden_window = ttk.Window
-app = ttk.Window
+        SettingsPath_AppData = appdirs.user_config_dir(Prog_name, appauthor=False, roaming=True)
+        r'''C:\Users\kamik\AppData\Roaming\Text_grabber'''
+
+        #General
+        General_settings_path = r'Settings\\A1_Settings.ini'
+        Description = r'Settings\\A2_Description.txt'
+
+        # Extraction
+        Tags_to_extraction = r"Settings\\E1_Tags_to_extraction.txt"
+        Part_of_tag_to_extraction = r"Settings\\E2_Part_of_tag_to_extraction.txt"
+        Tags_before_li = r"Settings\\E3_Tag_before_li.txt"
+        # Forbidden
+        Forbidden_tag = r"Settings\\F1_Forbidden_tags.txt"
+        Forbidden_part_of_tag = r"Settings\\F2_Forbidden_part_of_tag.txt"
+        Forbidden_part_of_path = r"Settings\\F3_Forbidden_part_of_path.txt"
+        Forbidden_text = r"Settings\\F4_Forbidden_text.txt"
+        # Other
+        Li_Class_Replace = r"Settings\\O1_Li_Class_Replace.txt"
 
 
-def exit_app():
-    hidden_window.destroy()
-
-    if language_changed:
-        app.destroy()
-    else:
-        app.deiconify()
 
 
-def main_from_prog(window, app_original):
-    global hidden_window
-    global app
-    app = app_original
-    hidden_window = window
-    hidden_window.withdraw()
+        General_settings_path_old = r'Settings\\Settings.ini'
+        Description_old = r'Settings\\Description.txt'
 
-    restart_app()
-
-
-def read_txt_settings(path):
-    a = []
-    with open(path, encoding="utf8") as tag_file:
-        for line in tag_file:
-            a.append(line.strip("\n "))
-    return a
+        # Extraction
+        Tags_to_extraction_old = r"Settings\\Tags_to_extraction.txt"
+        Part_of_tag_to_extraction_old = r"Settings\\Part_of_tag_to_extraction.txt"
+        Tags_before_li_old = r"Settings\\Tag_before_li.txt"
+        # Forbidden
+        Forbidden_tag_old = r"Settings\\Forbidden_tags.txt"
+        Forbidden_part_of_tag_old = r"Settings\\Forbidden_part_of_tag.txt"
+        Forbidden_part_of_path_old = r"Settings\\Forbidden_part_of_path.txt"
+        Forbidden_text_old = r"Settings\\Forbidden_text.txt"
+        # Other
+        Li_Class_Replace_old = r"Settings\\Li_Class_Replace.txt"
 
 
-def get_settings_pack():
-    settings_config_read(app)
-    Tags_to_extraction = read_txt_settings(SettingsPath.Tags_to_extraction)
-    Part_of_tag_to_extraction = read_txt_settings(SettingsPath.Part_of_tag_to_extraction)
-    Forbidden_tag = read_txt_settings(SettingsPath.Forbidden_tag)
-    Forbidden_tag = [a.lower() for a in Forbidden_tag]
-    Forbidden_part_of_tag = read_txt_settings(SettingsPath.Forbidden_part_of_tag)
-    Forbidden_part_of_path = read_txt_settings(SettingsPath.Forbidden_part_of_path)
-    Forbidden_text = read_txt_settings(SettingsPath.Forbidden_text)
-    a = read_txt_settings(SettingsPath.Li_Class_Replace)
-    Li_Class_Replace = []
-    for _ in a:
-        Li_Class_Replace.append(_.split("=",1))
+    #   [General]
+    Settings_language = _('En')
+    Game_language = 'Russian'
 
-    Folders_to_search = read_txt_settings(SettingsPath.Folders_to_search)
-    Tags_before_li = read_txt_settings(SettingsPath.Tags_before_li)
+    Path_to_Data = _('None')
+    Path_to_Mod_folder = _('None')
+    Path_to_Another_folder = _('None')
 
+    Delete_old_versions_translation = True
+    Merge_folders = True
+    Not_rename_files = False
+
+    #   [Comments]
+    Add_filename_comment = True
+    Add_comment = True
+    Comment_add_EN = True
+    Comment_starting_similar_as_ogiganal_text = True
+    Comment_spacing_before_tag = False
+    Comment_replace_n_as_new_line = True
+
+    #  [Grabbing]
+    Add_stuffAdjective_and_mark_it = True
+    Add_stuffAdjective_and_mark_it_text = 'Adjective ~LABEL~'
+
+    Check_at_least_one_letter_in_text = False
+    add_titleFemale = True
+    add_titleShortFemale = True
+    Tkey_system_on = True
+
+    tags_left_spacing = "	"
+    Add_new_line_next_defname = True
+    Add_new_line_next_defname_treshhold = True
+
+    labelPlural = True
+    labelMale = False
+    labelFemale = False
+    labelMalePlural = False
+    labelFemalePlural = False
     list_pawn_tag = []
-    if SettingsValues.labelPlural == True:
-        list_pawn_tag.append('labelPlural')
-    if SettingsValues.labelMale == True:
-        list_pawn_tag.append('labelMale')
-    if SettingsValues.labelFemale == True:
-        list_pawn_tag.append('labelFemale')
-    if SettingsValues.labelMalePlural == True:
-        list_pawn_tag.append('labelMalePlural')
-    if SettingsValues.labelFemalePlural == True:
-        list_pawn_tag.append('labelFemalePlural')
-    Settings_pack = [  # [General]
-        SettingsValues.Settings_language,
-        SettingsValues.Game_language,
-        SettingsValues.Path_to_Data, SettingsValues.Path_to_Mod_folder, SettingsValues.Path_to_Another_folder,
-        SettingsValues.Delete_old_versions_translation, SettingsValues.Merge_folders, SettingsValues.Not_rename_files,
-        #   [Comments]
-        SettingsValues.Add_filename_comment, SettingsValues.Add_comment, SettingsValues.Comment_add_EN,
-        SettingsValues.Comment_starting_similar_as_ogiganal_text, SettingsValues.Comment_spacing_before_tag, SettingsValues.Comment_replace_n_as_new_line,
-        #  [Grabbing]
-        SettingsValues.Add_stuffAdjective_and_mark_it, SettingsValues.Add_stuffAdjective_and_mark_it_text,
-        SettingsValues.Check_at_least_one_letter_in_text, SettingsValues.add_titleFemale, SettingsValues.add_titleShortFemale,
-        SettingsValues.Tkey_system_on,
-        SettingsValues.tags_left_spacing, SettingsValues.Add_new_line_next_defname,
-        list_pawn_tag,
-        #  [About.xml]
-        SettingsValues.Author, SettingsValues.New_Name, SettingsValues.Add_mod_Dependence, SettingsValues.Description,
-        #  [Preview]
-        SettingsValues.Image_on_Preview, SettingsValues.Position, SettingsValues.Offset_x, SettingsValues.Offset_y,
 
-        #  [Tags]
-        Tags_to_extraction, Part_of_tag_to_extraction, Tags_before_li,
-        Forbidden_tag, Forbidden_part_of_tag, Forbidden_part_of_path, Forbidden_text,
-        Li_Class_Replace, Folders_to_search,
-    ]
-    return Settings_pack
 
+
+    #  [About.xml]
+    Author = 'Kamikadza13'
+    New_Name_before_replace = '~MOD_NAME~ rus'
+    Add_mod_Dependence = True
+    Description = ''
+
+    #  [Preview]
+    Image_on_Preview = True
+    Position_of_image = 'UL'
+    Position_of_image_Offset_x = 0
+    Position_of_image_Offset_y = 0
+
+    # [Other]
+
+    Tags_to_extraction = []
+    Part_of_tag_to_extraction = []
+    Tags_before_li = []
+
+    Forbidden_tag = []
+    Forbidden_part_of_tag = []
+    Forbidden_part_of_path = []
+    Forbidden_text = []
+
+    Li_Class_Replace = []
+
+
+
+@dataclass
+class SettingsUnfouded:
+    name: str
+    section: str
+
+settings_unfouded_values: list[SettingsUnfouded]
+settings_unfouded_values = []
+
+def settings_config_update_write():
+    with open(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.General_settings_path, 'w') as aaa:
+        config.write(aaa)
+
+
+
+def settings_read_error_no_value(option_name, option_section):
+    print('settings_read_error_no_value runned')
+    Messagebox.show_info(title=_('FOUNDED NEW VALUE!'), alert=True,
+                         message=_(
+                             "FOUNDED NEW VALUE - {option_name}\nPlease Check tab {option_section}").format(
+                             option_name=option_name, option_section=option_section),
+                         parent=Window_settings_app)
+    tabs_name = {'General': 0, 'Comment': 1, 'Grabbing': 2, 'About.xml': 3, 'Preview': 4}
+    Window_settings_app.raise_tab(tabs_name.get(option_section))
+
+
+def get_settings_language() -> Result[str, str]:
+
+    try:
+        config.read(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.General_settings_path, "utf8")
+        SettingsValues.Settings_language = config.get('General', 'Settings_language')
+        return Ok(SettingsValues.Settings_language)
+    except Exception as ex:
+
+        os.makedirs(os.path.dirname(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.General_settings_path), exist_ok=True)
+        with open(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.General_settings_path, 'w', encoding="utf8") as ini:
+            ini.write(OriginalSettingsFileText.A1_Settings)
+
+        config.read(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.General_settings_path, "utf8")
+        SettingsValues.Settings_language = config.get('General', 'Settings_language')
+        return Err(SettingsValues.Settings_language)
+
+def get_config_values(stop_on_error=False) -> Result[SettingsValues, None]:
+    def config_get():
+        def read_txt_settings(path: str) -> list[str]:
+            a = []
+            with open(path, encoding="utf8") as tag_file:
+                for line in tag_file:
+                    a.append(line.strip("\n "))
+            return a
+
+        try:
+            SettingsValues.Settings_language = config.get('General', 'Settings_language')
+            SettingsValues.Game_language = config.get('General', 'Game_language')
+            SettingsValues.Path_to_Data = config.get('General', 'Path_to_Data')
+            SettingsValues.Path_to_Mod_folder = config.get('General', 'Path_to_Mod_folder')
+            SettingsValues.Path_to_Another_folder = config.get('General', 'Path_to_Another_folder')
+            SettingsValues.Delete_old_versions_translation = config.getboolean('General',
+                                                                               'Delete_old_versions_translation')
+            SettingsValues.Merge_folders = config.getboolean('General', 'Merge_folders')
+            SettingsValues.Not_rename_files = config.getboolean('General', 'Not_rename_files')
+
+            SettingsValues.Add_filename_comment = config.getboolean('Comment', 'Add_filename_comment')
+            SettingsValues.Add_comment = config.getboolean('Comment', 'Add_comment')
+            SettingsValues.Comment_add_EN = config.getboolean('Comment', 'Comment_add_EN')
+            SettingsValues.Comment_starting_similar_as_ogiganal_text = config.getboolean('Comment',
+                                                                                         'Comment_starting_similar_as_ogiganal_text')
+            SettingsValues.Comment_spacing_before_tag = config.getboolean('Comment', 'Comment_spacing_before_tag')
+            SettingsValues.Comment_replace_n_as_new_line = config.getboolean('Comment',
+                                                                             'Comment_replace_n_as_new_line')
+
+            SettingsValues.Check_at_least_one_letter_in_text = config.getboolean('Grabbing',
+                                                                                 'Check_at_least_one_letter_in_text')
+            SettingsValues.add_titleFemale = config.getboolean('Grabbing', 'add_titleFemale')
+            SettingsValues.add_titleShortFemale = config.getboolean('Grabbing', 'add_titleShortFemale')
+            SettingsValues.Add_stuffAdjective_and_mark_it = config.getboolean('Grabbing',
+                                                                              'Add_stuffAdjective_and_mark_it')
+            SettingsValues.Add_stuffAdjective_and_mark_it_text = config.get('Grabbing',
+                                                                            'Add_stuffAdjective_and_mark_it_text')
+            SettingsValues.labelPlural = config.getboolean('Grabbing', 'labelPlural')
+            SettingsValues.labelMale = config.getboolean('Grabbing', 'labelMale')
+            SettingsValues.labelFemale = config.getboolean('Grabbing', 'labelFemale')
+            SettingsValues.labelMalePlural = config.getboolean('Grabbing', 'labelMalePlural')
+            SettingsValues.labelFemalePlural = config.getboolean('Grabbing', 'labelFemalePlural')
+            SettingsValues.list_pawn_tag = []
+            if SettingsValues.labelPlural == True:
+                SettingsValues.list_pawn_tag.append('labelPlural')
+            if SettingsValues.labelMale == True:
+                SettingsValues.list_pawn_tag.append('labelMale')
+            if SettingsValues.labelFemale == True:
+                SettingsValues.list_pawn_tag.append('labelFemale')
+            if SettingsValues.labelMalePlural == True:
+                SettingsValues.list_pawn_tag.append('labelMalePlural')
+            if SettingsValues.labelFemalePlural == True:
+                SettingsValues.list_pawn_tag.append('labelFemalePlural')
+
+            SettingsValues.tags_left_spacing = config.get('Grabbing', 'tags_left_spacing').strip('"')
+            SettingsValues.Add_new_line_next_defname = config.getboolean('Grabbing', 'Add_new_line_next_defname')
+            SettingsValues.Add_new_line_next_defname_treshhold = config.getboolean('Grabbing',
+                                                                                   'Add_new_line_next_defname_treshhold')
+            SettingsValues.Tkey_system_on = config.getboolean('Grabbing', 'Tkey_system_on')
+
+            SettingsValues.Author = config.get('About.xml', 'Author')
+            SettingsValues.New_Name_before_replace = config.get('About.xml', 'New_Name')
+            SettingsValues.Add_mod_Dependence = config.getboolean('About.xml', 'Add_mod_Dependence')
+
+            def get_description():
+                try:
+                    with open(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Description, encoding="utf8") as desc:
+                        SettingsValues.Description = desc.read().strip(" \n")
+                except:
+                    print(_('Error reading {file_name}').format(file_name='Description'))
+                    with open(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Description, 'w', encoding="utf8") as desc:
+                        desc.write(OriginalSettingsFileText.A2_Description)
+                    get_description()
+
+            get_description()
+
+            SettingsValues.Image_on_Preview = config.getboolean('Preview', 'Image_on_Preview')
+            SettingsValues.Position_of_image = config.get('Preview', 'Position')
+            SettingsValues.Position_of_image_Offset_x = config.getint('Preview', 'Offset_x')
+            SettingsValues.Position_of_image_Offset_y = config.getint('Preview', 'Offset_y')
+
+            def get_Tags_to_extraction():
+                try:
+                    SettingsValues.Tags_to_extraction = read_txt_settings(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Tags_to_extraction)
+                except:
+                    print(_('Error reading {file_name}').format(file_name='Tags_to_extraction'))
+                    with open(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Tags_to_extraction, 'w', encoding="utf8") as file:
+                        file.write(OriginalSettingsFileText.E1_Tags_to_extraction)
+                    get_Tags_to_extraction()
+
+            get_Tags_to_extraction()
+
+
+
+            def get_Part_of_tag_to_extraction():
+                try:
+                    SettingsValues.Part_of_tag_to_extraction = read_txt_settings(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Part_of_tag_to_extraction)
+                except:
+                    print(_('Error reading {file_name}').format(file_name='Part_of_tag_to_extraction'))
+                    with open(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Part_of_tag_to_extraction, 'w', encoding="utf8") as file:
+                        file.write(OriginalSettingsFileText.E2_Part_of_tag_to_extraction)
+                    get_Part_of_tag_to_extraction()
+
+            get_Part_of_tag_to_extraction()
+
+            def get_Tags_before_li():
+                try:
+                    SettingsValues.Tags_before_li = read_txt_settings(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Tags_before_li)
+                except:
+                    print(_('Error reading {file_name}').format(file_name='Tags_before_li'))
+                    with open(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Tags_before_li, 'w', encoding="utf8") as file:
+                        file.write(OriginalSettingsFileText.E3_Tag_before_li)
+                    get_Tags_before_li()
+
+            get_Tags_before_li()
+
+
+            def get_Forbidden_tag():
+                try:
+                    SettingsValues.Forbidden_tag = [tag.lower() for tag in
+                                                    read_txt_settings(
+                                                        SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Forbidden_tag)]
+                except:
+                    print(_('Error reading {file_name}').format(file_name='Forbidden_tag'))
+                    with open(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Forbidden_tag, 'w', encoding="utf8") as file:
+                        file.write(OriginalSettingsFileText.F1_Forbidden_tags)
+                    get_Forbidden_tag()
+
+            get_Forbidden_tag()
+
+            def get_Forbidden_part_of_tag():
+                try:
+                    SettingsValues.Forbidden_part_of_tag = read_txt_settings(
+                        SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Forbidden_part_of_tag)
+                except:
+                    print(_('Error reading {file_name}').format(file_name='Forbidden_part_of_tag'))
+                    with open(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Forbidden_part_of_tag, 'w', encoding="utf8") as file:
+                        file.write(OriginalSettingsFileText.F2_Forbidden_part_of_tag)
+                    get_Forbidden_part_of_tag()
+
+            get_Forbidden_part_of_tag()
+
+
+            def get_Forbidden_part_of_path():
+                try:
+                    SettingsValues.Forbidden_part_of_path = read_txt_settings(
+                        SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Forbidden_part_of_path)
+                except:
+                    print(_('Error reading {file_name}').format(file_name='Forbidden_part_of_path'))
+                    with open(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Forbidden_part_of_path, 'w', encoding="utf8") as file:
+                        file.write(OriginalSettingsFileText.F3_Forbidden_part_of_path)
+                    get_Forbidden_part_of_path()
+
+            get_Forbidden_part_of_path()
+
+            def get_Forbidden_text():
+                try:
+                    SettingsValues.Forbidden_text = read_txt_settings(
+                        SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Forbidden_text)
+
+                except:
+                    print(_('Error reading {file_name}').format(file_name='Forbidden_text'))
+                    with open(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Forbidden_text, 'w', encoding="utf8") as file:
+                        file.write(OriginalSettingsFileText.F4_Forbidden_text)
+                    get_Forbidden_text()
+
+            get_Forbidden_text()
+
+
+            def get_Li_Class_Replace():
+                try:
+                    SettingsValues.Li_Class_Replace = [line.split("=", 1) for line in
+                                                       read_txt_settings(
+                                                           SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Li_Class_Replace)]
+
+                except:
+                    print(_('Error reading {file_name}').format(file_name='Li_Class_Replace'))
+                    with open(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.Li_Class_Replace, 'w', encoding="utf8") as file:
+                        file.write(OriginalSettingsFileText.O1_Li_Class_Replace)
+                    get_Li_Class_Replace()
+
+            get_Li_Class_Replace()
+
+
+
+
+            return Ok(SettingsValues)
+        except configparser.NoOptionError as err:
+            if stop_on_error:
+                return Err(None)
+            option_name = err.option
+            option_section = err.section
+            print(f"Невозможно найти опцию: '{option_name}' в '{option_section}'" if SettingsValues.Settings_language == 'ru' else f"Can't find option: '{option_name}' into '{option_section}'")
+            settings_unfouded_values.append(SettingsUnfouded(option_name, option_section))
+            config.set(option_section, option_name, getattr(SettingsValues, option_name))
+            settings_config_update_write()
+            config.read(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.General_settings_path, "utf8")
+
+            return Err(None)
+
+
+        # except Exception as er:
+        #     print("Can't get values from settings")
+        #     print(er)
+        #
+        #     return Err(None)
+
+
+    i = 1 if not stop_on_error else 99
+    while i < 100:
+        i += 1
+        res = config_get()
+
+        if is_ok(res):
+            return res
+    return Err(None)
+
+
+def checking_Settings_files(settings_path=SettingsValues.SettingsPath.SettingsPath_AppData):
+    all_ok = [
+            file_exists(f"{settings_path}\\{SettingsValues.SettingsPath.General_settings_path}"),
+            file_exists(f"{settings_path}\\{SettingsValues.SettingsPath.Description}"),
+            file_exists(f"{settings_path}\\{SettingsValues.SettingsPath.Tags_to_extraction}"),
+            file_exists(f"{settings_path}\\{SettingsValues.SettingsPath.Part_of_tag_to_extraction}"),
+            file_exists(f"{settings_path}\\{SettingsValues.SettingsPath.Tags_before_li}"),
+            file_exists(f"{settings_path}\\{SettingsValues.SettingsPath.Forbidden_tag}"),
+            file_exists(f"{settings_path}\\{SettingsValues.SettingsPath.Forbidden_part_of_tag}"),
+            file_exists(f"{settings_path}\\{SettingsValues.SettingsPath.Forbidden_part_of_path}"),
+            file_exists(f"{settings_path}\\{SettingsValues.SettingsPath.Forbidden_text}"),
+            file_exists(f"{settings_path}\\{SettingsValues.SettingsPath.Li_Class_Replace}"),
+        ]
+
+    if all(all_ok):
+        return Ok(None)
+    else:
+        return Err(None)
+
+def rename_old_settings_names_to_new(path_srs, path_dst):
+    rename = {
+        'Settings.ini' : 'A1_Settings.ini',
+        'Description.txt' : 'A2_Description.txt',
+
+        'Tags_to_extraction.txt' : 'E1_Tags_to_extraction.txt',
+        'Part_of_tag_to_extraction.txt' : 'E2_Part_of_tag_to_extraction.txt',
+        'Tag_before_li.txt' : 'E3_Tag_before_li.txt',
+
+        'Forbidden_tags.txt' : 'F1_Forbidden_tags.txt',
+        'Forbidden_part_of_tag.txt' : 'F2_Forbidden_part_of_tag.txt',
+        'Forbidden_part_of_path.txt' : 'F3_Forbidden_part_of_path.txt',
+        'Forbidden_text.txt' : 'F4_Forbidden_text.txt',
+
+        'Li_Class_Replace.txt' : 'O1_Li_Class_Replace.txt',
+              }
+    for item in rename:
+        if file_exists(path_srs + "\\" + item):
+
+            os.makedirs(path_dst, exist_ok=True)
+            shutil.copy(path_srs + "\\" + item, path_dst + "\\" + rename[item])
+
+
+
+def check_settings_new():
+    def get_ok():
+        if file_exists(SettingsValues.SettingsPath.SettingsPath_AppData + '\\' + SettingsValues.SettingsPath.General_settings_path):
+            if is_ok(checking_Settings_files(SettingsValues.SettingsPath.SettingsPath_AppData)):
+                return Ok(None)
+
+        if file_exists(SettingsValues.SettingsPath.General_settings_path):
+            if is_ok(checking_Settings_files('.')):
+                shutil.copytree('.\\Settings', SettingsValues.SettingsPath.SettingsPath_AppData + '\\Settings', dirs_exist_ok=True)
+                print(_('The settings have been moved to AppData\\Roaming\\Text_grabber\\Settings'))
+                return Ok(_('The settings have been moved to AppData\\Roaming\\Text_grabber\\Settings'))
+
+        if file_exists(SettingsValues.SettingsPath.General_settings_path_old):
+            rename_old_settings_names_to_new('.\\Settings', SettingsValues.SettingsPath.SettingsPath_AppData + '\\Settings')
+            if is_ok(checking_Settings_files(SettingsValues.SettingsPath.SettingsPath_AppData)):
+                print(_('The settings have been moved to AppData\\Roaming\\Text_grabber\\Settings'))
+                return Ok(_('The settings have been moved to AppData\\Roaming\\Text_grabber\\Settings'))
+
+        return Err(_("Can't get settings"))
+    a = get_ok()
+    if is_ok(a):
+        shutil.rmtree('Settings', ignore_errors=True)
+        shutil.rmtree('Settings_original', ignore_errors=True)
+
+
+def update_settings_new(Text_grabber_win, Hidden_win=None, Settings_win=None):
+    global Window_Text_grabber
+    global Window_Hidden
+    global Window_settings_app
+    Window_Text_grabber = Text_grabber_win
+    if Hidden_win is not None:
+        Window_Hidden = Hidden_win
+    if Settings_win is not None:
+        Window_settings_app = Settings_win
+
+    error_config_val = get_config_values()
+    settings_config_update_write()
+
+    return SettingsValues
+
+
+def run_settings_app():
+    def set_appwindow(root):
+        GWL_EXSTYLE = -20
+        WS_EX_APPWINDOW = 0x00040000
+        WS_EX_TOOLWINDOW = 0x00000080
+        hwnd = windll.user32.GetParent(root.winfo_id())
+        style = windll.user32.GetWindowLongPtrW(hwnd, GWL_EXSTYLE)
+        style = style & ~WS_EX_TOOLWINDOW
+        style = style | WS_EX_APPWINDOW
+        res = windll.user32.SetWindowLongPtrW(hwnd, GWL_EXSTYLE, style)
+        root.wm_withdraw()
+        root.after(10, lambda: root.wm_deiconify())
+    global Window_Text_grabber
+    global Window_Hidden
+    global Window_settings_app
+    update_settings_new(Window_Text_grabber, Window_Hidden)
+    Window_settings_app = TestApp(Window_Hidden)
+    Window_settings_app.overrideredirect(True)
+    Window_settings_app.after(10, lambda: set_appwindow(root=Window_settings_app))
+
+
+    def Settings_Get_Error_list_message(count):
+        names = []
+        sections = []
+
+
+
+        for value in settings_unfouded_values:
+            if value.section not in sections:
+                sections.append(value.section)
+            if value.name not in names:
+                names.append(value.name)
+
+        tabs_name = {'General': 0, 'Comment': 1, 'Grabbing': 2, 'About.xml': 3, 'Preview': 4}
+        if count == 1:
+            Messagebox.show_error(
+                title=_('A new value has been found!'), alert=True,
+                message=_(
+                    "FOUNDED NEW VALUE - {option_name}\nPlease Check tab {option_section}").format(
+                    option_name=''.join(names), option_section=''.join(sections)),
+                parent=Window_settings_app)
+
+        else:
+            Messagebox.show_error(title=_('New values have been found!'), alert=True,
+                                  message=_(
+                                      "New values have been found in sections - {option_section}\nPlease Check {option_names}").format(
+                                      option_section=', '.join(sections), option_names=', '.join(names)),
+                                  parent=Window_settings_app)
+
+        Window_settings_app.raise_tab(tabs_name.get(sections[0]))
+
+    if settings_unfouded_values:
+        Window_settings_app.after(10, lambda: Settings_Get_Error_list_message(len(settings_unfouded_values)))
+
+    Window_settings_app.mainloop()
+
+def main_from_prog(Win_Text_grabber,):
+    global Window_Text_grabber
+    global Window_Hidden
+    Window_Text_grabber = Win_Text_grabber
+    Window_Text_grabber.withdraw()
+    Window_Hidden = ttk.Toplevel(master=Window_Text_grabber, title="Hidden window")
+    Window_Hidden.withdraw()
+
+    if SettingsValues.Settings_language == 'ru':
+        ru_i18n.install()
+    else:
+        en_i18n.install()
+
+    run_settings_app()
 
 if __name__ == '__main__':
-    app = ttk.Window(title="Main app")
-    hidden_window = ttk.Toplevel(master=app, title="Hidden window")
+    get_settings_language()
 
-    main_from_prog(hidden_window, app)
-    app.mainloop()
-    get_settings_pack()
+    print(f"{appdirs.user_config_dir(SettingsValues.SettingsPath.Prog_name, appauthor=False, roaming=True)=}")
+    check_settings_new()
 
 
-# pybabel extract -o locale/T_test.pot Text_grabber_settings.py
+    Window_Text_grabber = ttk.Window(title="Text grabber dummy window")
+    main_from_prog(Window_Text_grabber)
+    Window_Text_grabber.mainloop()
+
+r'''
+
 # pybabel init -D T_test -i locale/T_test.pot -d locale -l ru
 # pybabel init -D T_test -i locale/T_test.pot -d locale -l en
-# pybabel update -D T_test -i locale/T_test.pot -d locale -l ru
-# pybabel update -D T_test -i locale/T_test.pot -d locale -l en
-# pybabel compile -D T_test -i locale\ru\LC_MESSAGES\T_test.po -o locale\ru\LC_MESSAGES\T_test.mo
-# pybabel compile -D T_test -i locale\en\LC_MESSAGES\T_test.po -o locale\en\LC_MESSAGES\T_test.mo
+
+
+
+pybabel extract -o locale/T_test.pot Text_grabber_settings.py
+pybabel update -D T_test -i locale/T_test.pot -d locale -l ru
+pybabel update -D T_test -i locale/T_test.pot -d locale -l en
+pybabel compile -D T_test -i locale\ru\LC_MESSAGES\T_test.po -o locale\ru\LC_MESSAGES\T_test.mo
+pybabel compile -D T_test -i locale\en\LC_MESSAGES\T_test.po -o locale\en\LC_MESSAGES\T_test.mo
+'''
+

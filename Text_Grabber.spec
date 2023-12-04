@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 a = Analysis(
-    ['Text_to_translate.py'],
+    ['Text_Grabber.py'],
     pathex=[],
     binaries=[],
     datas=[],
@@ -19,7 +19,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='Text_to_translate',
+    name='Text_Grabber',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -39,5 +39,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='Text_to_translate',
+    name='Text_Grabber',
 )
