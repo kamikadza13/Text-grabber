@@ -1,4 +1,5 @@
 Update log
+update
 
 Update 1.3.0 
 	The settings have been moved to AppData/Roaming !!!
