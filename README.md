@@ -1,4 +1,4 @@
-# Text-to-translate-RimWorld
+# Text-Grabber-RimWorld
 
 Grab text from xml files
 and create files ready to translate
