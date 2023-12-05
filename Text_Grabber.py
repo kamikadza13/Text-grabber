@@ -1,57 +1,44 @@
 # -*- coding: utf-8 -*-
-import configparser
 import copy
-import glob
 import ctypes
-# from print_color import print
-
-import icecream
-import ttkbootstrap
-from icecream import ic
-
+import glob
+import os
 import re
-import sys
-from logging import warning
 import shutil
+import threading
+import xml.etree.ElementTree as ET
+from ctypes import windll
+from dataclasses import dataclass
+from html import escape
+from logging import warning
+from os.path import exists as file_exists
 from re import match
 from re import sub
-import os
-from tkinter import filedialog
-from html import escape
 from shutil import copy as shcopy
 from shutil import copytree
 from shutil import rmtree
-from pathvalidate import sanitize_filename
-from dataclasses import dataclass
-import ttkbootstrap as ttk_boot
-from ctypes import windll
+from tkinter import Button
+from tkinter import filedialog
 
-import threading
-import xml.etree.ElementTree as ET
-from lxml.etree import XMLParser
+import icecream
 import lxml.etree as etree
-
-from os.path import exists as file_exists
-
 import pyperclip
-from result import Ok, Err, Result, is_ok, is_err
+import ttkbootstrap
+import ttkbootstrap as ttk_boot
+from lxml.etree import XMLParser
+from pathvalidate import sanitize_filename
+from printy import printy
+from result import Ok, Err, is_ok, is_err
 from ttkbootstrap.dialogs import Messagebox
 
 import Loadfolder_module
 import Text_grabber_settings
-
 import image_edit
-
 from text2 import parent_folders
 
-from tkinter import Button
-from printy import printy
+# from print_color import print
 
-import win32con
-import win32api
-import win32gui
-
-Version_of_Text_grabber = "1.3.0"
+Version_of_Text_grabber = "1.3.1"
 
 global exitString
 global folder
@@ -81,7 +68,6 @@ def escape_printy_string(string):
     return a
 
 
-#   TODO: Когда-нибудь добавить в GUI
 
 #   Текст startwith через regex - значит нужно экранировать спец символы типа $
 tag_endwith_skip = ['/nodes/Set/name', ]
@@ -876,7 +862,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
             def adding_in_string(stringa, elem_path_: str, child_: ET.Element, print_now: bool = False):
 
-                #   TODO: Если начинается с $ то не печатать
+
                 text1 = child_.text
                 text1 = escape(text1, quote=False)
                 text1 = text1.replace("li&gt;", "li>")
@@ -1038,6 +1024,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
         return strings
 
     printy('Writing Files...', 'c')
+
     for fl_idx, fil in enumerate(files_to_translate):
         try:
             Floodgauge['value'] = 30 + int(60 * (fl_idx / len(files_to_translate)))
@@ -1092,17 +1079,22 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
 
             # print("Начало разбивания файла на папки")
-            for f1 in Folders:
+            for folder_idx, f1 in enumerate(Folders):
+                file_path1 = file_path + "/" + f1
+
                 if S.Not_rename_files:
                     file_name1 = file_name.rpartition(".xml")[0]
                 else:
-                    file_name1 = file_name.rpartition(".xml")[0] + "_" + str(f1).rpartition('.')[2].rpartition('_')[2]
+                    if len(file_path1 + "/" + file_name + "_" + str(f1).rpartition('.')[2].rpartition('_')[2]) < 140:
+                        file_name1 = file_name.rpartition(".xml")[0] + "_" + str(f1).rpartition('.')[2].rpartition('_')[2]
+                    else:
+                        printy(f'{" "*15}[y<]{escape_printy_string(f1): <20}\\{escape_printy_string(file_full_path)}@ --> [r]The path is too long@ -> Reducing filemane + counter')
+                        file_name1 = file_name.rpartition(".xml")[0].rpartition(".")[2].rpartition("_")[2] + str(fl_idx) + "_" + str(folder_idx)
 
-                file_path1 = file_path + "/" + f1
                 file_path_plus_name = file_path1 + "/" + file_name1 + ".xml"
                 # print("New name/path:" + file_path_plus_name.partition('_Translation/')[2])
 
-                printy(f'Folder: [y<]{f1: <20}@  File: [y<]{escape_printy_string(file_full_path)}@ --> [<y]{file_path_plus_name.partition("_Translation/")[2]}@')
+                printy(f'Folder: [y<]{escape_printy_string(f1): <20}@  File: [y<]{escape_printy_string(file_full_path)}@ --> [<y]{file_path_plus_name.partition("_Translation/")[2]}@')
 
                 if file_exists(file_path_plus_name):
                     with open(file_path_plus_name, "r", encoding="utf-8") as Write_file:
@@ -1325,23 +1317,51 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
     # loadfolder_check_folders()
 
     if S.Merge_folders:
-        printy("Merge folders", 'n')
-        try:
-            folders_in__translation = glob.glob("_Translation/*/", recursive=False)
-            folders_name_in__translation = [sub('_Translation\\\\(.*)\\\\', '\\1', i) for i in folders_in__translation]
-            versions_name_in__translation = [float(i) for i in folders_name_in__translation if is_version(i)]
-            if file_exists("_Translation//Languages"):
-                if len(versions_name_in__translation) == 1:
-                    copytree(f"_Translation//{versions_name_in__translation[0]}//Languages", "_Translation//Languages",
-                             symlinks=False, ignore=None, dirs_exist_ok=True)
-                    rmtree(f"_Translation//{versions_name_in__translation[0]}//Languages")
-            printy("Merge folders... Done",'n')
-            print()
 
-        except Exception as ex:
-            Error_log.append(f"Error Merge_folders {ex} \n\n")
-            printy(fr"[r]\[ERROR\]@ Merge_folders {escape_printy_string(str(ex))} \n\n", predefined='<m')
-            print()
+
+        # folders_in__translation = glob.glob("_Translation/*/", recursive=False)
+        # folders_name_in__translation = [sub('_Translation\\\\(.*)\\\\', '\\1', i) for i in folders_in__translation]
+        # versions_name_in__translation = [float(i) for i in folders_name_in__translation if is_version(i)]
+
+        if file_exists("_Translation//Languages"):
+            try:
+                with os.scandir('_Translation') as scandir:
+                    versions_name_in__translation = [entry.name for entry in scandir if
+                                                     (entry.is_dir() and is_version(entry.name))]
+
+                print(versions_name_in__translation)
+
+                if len(versions_name_in__translation) == 1:
+                    versions_name_in__translation = versions_name_in__translation[0]
+                    if file_exists(f"_Translation\\{versions_name_in__translation}\\Languages"):
+
+                        copytree(f"_Translation\\{versions_name_in__translation}\\Languages", "_Translation\\Languages",
+                                 dirs_exist_ok=True)
+                        rmtree(f"_Translation\\{versions_name_in__translation}\\Languages")
+            except Exception as ex:
+                Error_log.append(f"Error Merge_folders {ex} \n\n")
+                printy(fr"[r]\[ERROR\]@ Merge_folders {escape_printy_string(str(ex))} \n\n", predefined='<m')
+                print()
+        printy("Merge folders... Done", 'n')
+        print()
+        #
+        # printy("Merge folders", 'n')
+        # try:
+        #     folders_in__translation = glob.glob("_Translation/*/", recursive=False)
+        #     folders_name_in__translation = [sub('_Translation\\\\(.*)\\\\', '\\1', i) for i in folders_in__translation]
+        #     versions_name_in__translation = [float(i) for i in folders_name_in__translation if is_version(i)]
+        #     if file_exists("_Translation//Languages"):
+        #         if len(versions_name_in__translation) == 1:
+        #             copytree(f"_Translation//{versions_name_in__translation[0]}//Languages", "_Translation//Languages",
+        #                      symlinks=False, ignore=None, dirs_exist_ok=True)
+        #             rmtree(f"_Translation//{versions_name_in__translation[0]}//Languages")
+        #     printy("Merge folders... Done",'n')
+        #     print()
+        #
+        # except Exception as ex:
+        #     Error_log.append(f"Error Merge_folders {ex} \n\n")
+        #     printy(fr"[r]\[ERROR\]@ Merge_folders {escape_printy_string(str(ex))} \n\n", predefined='<m')
+        #     print()
 
 
     def Rename_Keyed_files():
@@ -1375,7 +1395,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                             for line in root:
                                 # input(line.text + f' tail = {line.tail.encode()}')
                                 if line.tag is not etree.Comment:
-                                    #   TODO: Поправить вывод комментов
+
                                     a = etree.Comment(f' {"EN: " if S.Comment_add_EN else ""}{line.text} ')
                                     a.tail = f'\n{S.tags_left_spacing}'
                                     line.addprevious(a)
@@ -1446,25 +1466,24 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
             else:
                 New_packageId = S.Author + "." + packageId
             modDependencies = f"""
-        		<li>
-        			<packageId>{packageId}</packageId>
-        			<displayName>{name}</displayName>
-        			<steamWorkshopUrl>{mod_url}</steamWorkshopUrl>
-        		</li>
-        	""" if S.Add_mod_Dependence else ""
+		<li>
+			<packageId>{packageId}</packageId>
+			<displayName>{name}</displayName>
+			<steamWorkshopUrl>{mod_url}</steamWorkshopUrl>
+		</li>""" if S.Add_mod_Dependence else ""
             new_desc = S.Description.replace("~MOD_NAME~", name).replace("~MOD_DESCRIPTION~", description).replace(
                 "~MOD_URL~", mod_url)
             about_text = f'''<ModMetaData>
-        	<name>{New_Name}</name>
-        	<author>{S.Author}</author>
-        	<packageId>{New_packageId}</packageId>
-        	<supportedVersions>{supportedVersions}</supportedVersions>
-        	<modDependencies>{modDependencies}</modDependencies>
-        	<loadAfter>
-        		<li>{packageId}</li>
-        	</loadAfter>
-        	<description>{new_desc}</description>
-        </ModMetaData>'''
+	<name>{New_Name}</name>
+	<author>{S.Author}</author>
+	<packageId>{New_packageId}</packageId>
+	<supportedVersions>{supportedVersions}</supportedVersions>
+	<modDependencies>{modDependencies}</modDependencies>
+	<loadAfter>
+		<li>{packageId}</li>
+	</loadAfter>
+	<description>{new_desc}</description>
+</ModMetaData>'''
 
             with open('_Translation/About/About.xml', "w", encoding='utf-8') as f:
                 f.write(about_text)
