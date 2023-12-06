@@ -38,7 +38,7 @@ from text2 import parent_folders
 
 # from print_color import print
 
-Version_of_Text_grabber = "1.3.1"
+Version_of_Text_grabber = "1.3.2"
 
 global exitString
 global folder
@@ -425,7 +425,9 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
     printy('Reading Files... Done', '<o')
     print()
 
-    def finish_string(tree2) -> list[FolderDefnamePathText]:
+    def finish_string(tree2) -> (list[FolderDefnamePathText], list[tuple] | None):
+        XmlExtensions_Keyed = []
+
         def print_path_of_elems(elem: ET.Element, root3: ET.Element, elem_path="", first_time_start=False):
             def RulePackDef_def(rulePackDef: ET.Element):
                 global ruleFiles_list
@@ -821,6 +823,43 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                 parent.clear()
                 parent.text = text
 
+            def XmlExtensions_SettingsMenuDef(elem: ET.Element):
+                settings = elem.find("settings")
+                if settings is not None:
+                    for element in settings.iter():
+                        if element.tag == "li":
+                            tKey = ''
+                            tKey_text = ''
+                            tKeyTip = ''
+                            tKeyTip_text = ''
+                            for el in element:
+                                match el.tag:
+                                    case 'tKey':
+                                        tKey = el.text
+                                    case 'label':
+                                        tKey_text = el.text
+                                        el.tag = 'Replaced'
+                                        el.clear()
+                                    case 'text':
+                                        tKey_text = el.text
+                                        el.tag = 'Replaced'
+                                        el.clear()
+
+                                    case 'tKeyTip':
+                                        tKeyTip = el.text
+                                        el.tag = 'Replaced'
+                                        el.clear()
+
+                                    case 'tooltip':
+                                        tKeyTip_text = el.text
+                                        el.tag = 'Replaced'
+                                        el.clear()
+
+                            if tKey and tKey_text:
+                                XmlExtensions_Keyed.append((tKey, tKey_text))
+                            if tKeyTip and tKeyTip_text:
+                                XmlExtensions_Keyed.append((tKeyTip, tKeyTip_text))
+
             global exitString
             # print(f'ET.Dump:{elem.tag}{elem.attrib}')
             # ET.dump(elem)
@@ -859,6 +898,8 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
             if elem.tag.partition("/")[0] == "QuestScriptDef":
                 if S.Tkey_system_on:
                     Tkey_system_QuestScriptDef(elem)
+            if elem.tag.partition("/")[0] == "XmlExtensions.SettingsMenuDef":
+                XmlExtensions_SettingsMenuDef(elem)
 
             def adding_in_string(stringa, elem_path_: str, child_: ET.Element, print_now: bool = False):
 
@@ -1019,7 +1060,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
         folder = []
         print_path_of_elems(root_finish_string, root_finish_string, '', True)
 
-        strings = exitString
+        strings = (exitString,XmlExtensions_Keyed if XmlExtensions_Keyed else None)
 
         return strings
 
@@ -1064,7 +1105,9 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                                 # ET.dump(r)
                                 # print(f"{r.tag}.{r.attrib}")
             adding_elems_into_root_by_Parent_elem(root, fil)
-            FDPT = finish_string(tree)
+            FDPT, XmlExtensions_Keyed = finish_string(tree)
+
+
             # print(fil)
             file_name = files_to_translate_name[fl_idx]
             file_full_path = fil
@@ -1111,11 +1154,13 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                         '/Languages/' + S.Game_language + "/Defs_to_translate", "/Defs") + "-->")
 
 
+                add_new_line_at_new_defname_Boolean = True
+                last_defname = ''
+
                 if S.Add_new_line_next_defname:
                     last_defname = FDPT[0].defname
                     defnames = []
                     [defnames.append(elem.defname) for elem in FDPT if elem.defname not in defnames]
-                    add_new_line_at_new_defname_Boolean = True
                     if S.Add_new_line_next_defname_treshhold:
                         if (len(defnames)/len(FDPT)) <= 0.6:
                             add_new_line_at_new_defname_Boolean = True
@@ -1170,34 +1215,47 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                 with open(file_path_plus_name, "w", encoding="utf-8") as Write_file:
                     Write_file.write(f"{text_start}\n")
 
-                    def find_defname(index):
-                        if index > len(text_body):
-                            return None
-
-                        for a in text_body[index:]:
-                            if "<!--" not in a:
-                                find = match(r"^\s*<(\S+?)\.", a)
-                                if find:
-                                    return find.group(1)
-                        else:
-                            return None
-
-                    now_def_nm = None
-                    next_def_nm = None
+                    # def find_defname(index):
+                    #     if index > len(text_body):
+                    #         return None
+                    #
+                    #     for a in text_body[index:]:
+                    #         if "<!--" not in a:
+                    #             find = match(r"^\s*<(\S+?)\.", a)
+                    #             if find:
+                    #                 return find.group(1)
+                    #     else:
+                    #         return None
+                    #
+                    # now_def_nm = None
+                    # next_def_nm = None
                     for idx, line in enumerate(text_body):
                         Write_file.write(f"{S.tags_left_spacing}{line}\n")
 
-                        if S.Add_new_line_next_defname:
-                            now_def_nm = find_defname(idx)
-                            next_def_nm = find_defname(idx + 1)
-
-                            if (now_def_nm is not None) and (next_def_nm is not None) and now_def_nm != next_def_nm:
-                                Write_file.write("\n")
+                        # if S.Add_new_line_next_defname:
+                        #     now_def_nm = find_defname(idx)
+                        #     next_def_nm = find_defname(idx + 1)
+                        #
+                        #     if (now_def_nm is not None) and (next_def_nm is not None) and now_def_nm != next_def_nm:
+                        #         Write_file.write("\n")
 
                     Write_file.write(f"{text_end}")
 
                 # print("     End of Folder       ")
                 # print("----------------------------")
+
+            if XmlExtensions_Keyed:
+                f_name_keyed = file_name.rpartition(".xml")[0].rpartition("\\")[2] + ".xml"
+                Keyed_path = f'_Translation\\Languages\\{S.Game_language}\\Keyed\\{f_name_keyed}'
+                printy(f"Founed  XmlExtensions.SettingsMenuDef -> [<y]Creating Keyed file:@ [y]{escape_printy_string(Keyed_path)}")
+                os.makedirs(os.path.dirname(Keyed_path), exist_ok=True)
+                with open(Keyed_path, 'w', encoding='utf-8') as Keyed:
+                    Keyed.write('<LanguageData>\n')
+                    for i in XmlExtensions_Keyed:
+                        Keyed.write(f"\t<{i[0]}>{i[1]}</{i[0]}>\n")
+                    Keyed.write('\n</LanguageData>')
+
+
             if Folders:
                 print()
             # print('\n'.Folder_and_text_1[0])
@@ -1317,7 +1375,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
     # loadfolder_check_folders()
 
     if S.Merge_folders:
-
+        printy("Merge folders", 'n')
 
         # folders_in__translation = glob.glob("_Translation/*/", recursive=False)
         # folders_name_in__translation = [sub('_Translation\\\\(.*)\\\\', '\\1', i) for i in folders_in__translation]
@@ -1329,7 +1387,6 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                     versions_name_in__translation = [entry.name for entry in scandir if
                                                      (entry.is_dir() and is_version(entry.name))]
 
-                print(versions_name_in__translation)
 
                 if len(versions_name_in__translation) == 1:
                     versions_name_in__translation = versions_name_in__translation[0]
@@ -1344,24 +1401,6 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                 print()
         printy("Merge folders... Done", 'n')
         print()
-        #
-        # printy("Merge folders", 'n')
-        # try:
-        #     folders_in__translation = glob.glob("_Translation/*/", recursive=False)
-        #     folders_name_in__translation = [sub('_Translation\\\\(.*)\\\\', '\\1', i) for i in folders_in__translation]
-        #     versions_name_in__translation = [float(i) for i in folders_name_in__translation if is_version(i)]
-        #     if file_exists("_Translation//Languages"):
-        #         if len(versions_name_in__translation) == 1:
-        #             copytree(f"_Translation//{versions_name_in__translation[0]}//Languages", "_Translation//Languages",
-        #                      symlinks=False, ignore=None, dirs_exist_ok=True)
-        #             rmtree(f"_Translation//{versions_name_in__translation[0]}//Languages")
-        #     printy("Merge folders... Done",'n')
-        #     print()
-        #
-        # except Exception as ex:
-        #     Error_log.append(f"Error Merge_folders {ex} \n\n")
-        #     printy(fr"[r]\[ERROR\]@ Merge_folders {escape_printy_string(str(ex))} \n\n", predefined='<m')
-        #     print()
 
 
     def Rename_Keyed_files():
