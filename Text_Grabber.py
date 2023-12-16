@@ -2,6 +2,7 @@
 import copy
 import ctypes
 import glob
+import html
 import os
 import re
 import shutil
@@ -38,7 +39,7 @@ from text2 import parent_folders
 
 # from print_color import print
 
-Version_of_Text_grabber = "1.3.2"
+Version_of_Text_grabber = "1.3.3"
 
 global exitString
 global folder
@@ -820,6 +821,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                 for li in parent:
                     if li.tag == "li":
                         text += a_0 + li.text + b
+                text += S.tags_left_spacing
                 parent.clear()
                 parent.text = text
 
@@ -856,9 +858,9 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                                         el.clear()
 
                             if tKey and tKey_text:
-                                XmlExtensions_Keyed.append((tKey, tKey_text))
+                                XmlExtensions_Keyed.append((tKey, html.escape(tKey_text)))
                             if tKeyTip and tKeyTip_text:
-                                XmlExtensions_Keyed.append((tKeyTip, tKeyTip_text))
+                                XmlExtensions_Keyed.append((tKeyTip, html.escape(tKeyTip_text)))
 
             global exitString
             # print(f'ET.Dump:{elem.tag}{elem.attrib}')
@@ -1873,5 +1875,8 @@ if __name__ == '__main__':
     Window_Text_grabber.mainloop()
 
 
-# pyinstaller --noconfirm Text_Grabber.spec
 
+'''
+pyinstaller --noconfirm Text_Grabber.spec
+
+'''
