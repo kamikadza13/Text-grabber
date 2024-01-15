@@ -3,8 +3,7 @@
 ## Download: [Text-grabber last version](https://github.com/kamikadza13/Text-grabber/releases/latest/download/Text_Grabber.zip)
 
 
-Grab text from xml files
-and create files ready to translate
+Grab text from mod files and create new Folder (with About folder for fast publishing Translation mod) ready to translate
 
 Before:
 
