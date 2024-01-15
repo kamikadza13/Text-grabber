@@ -28,10 +28,11 @@ import ttkbootstrap
 import ttkbootstrap as ttk_boot
 from lxml.etree import XMLParser
 from pathvalidate import sanitize_filename
-from printy import printy
+from printy import printy, escape as printy_escape
 from result import Ok, Err, is_ok, is_err
 from ttkbootstrap.dialogs import Messagebox
 
+import Check_New_Version
 import Loadfolder_module
 import Text_grabber_settings
 import image_edit
@@ -39,7 +40,7 @@ from text2 import parent_folders
 
 # from print_color import print
 
-Version_of_Text_grabber = "1.3.3"
+Version_of_Text_grabber = "1.3.5"
 
 global exitString
 global folder
@@ -63,16 +64,37 @@ class FolderDefnamePathText:
 
 def exit_prog():
     os._exit(0)
+    Window_Text_grabber.destroy()
 
 def escape_printy_string(string):
-    a = escape(str(string)).replace('[', r'\[').replace(']', r'\]')
+
+    a = printy_escape(str(string))
     return a
 
 
 
 #   Текст startwith через regex - значит нужно экранировать спец символы типа $
-tag_endwith_skip = ['/nodes/Set/name', ]
+tag_endwith_skip = ['\\nodes\\Set\\name', ]
 text_startwith_skip = ['RGB', r'\$', ]
+
+
+
+
+
+include_in_QOL = False
+incompatibleWith_QOL = '''\n	<incompatibleWith>
+		<li>kamikadza13qol.all</li>
+	</incompatibleWith>'''
+include_in_QOL_description = '''Перевод ~MOD_NAME~
+
+Этот перевод включен в мой перевод кучи мелких QOL модов:
+QOL rus
+https://steamcommunity.com/sharedfiles/filedetails/?id=2791163039
+
+Если вы заметили что-то не переведенное, то напишите об этом в комментариях под переводом ^_^
+
+если поставите сборку переводов, то этот мод не нужен
+(зайдите посмотрите, там много вкусного'''
 
 
 dont_close_console_after_end = False
@@ -95,8 +117,6 @@ pathes_to_parent_folders = []
 #  ----------------------------------
 #  ----------------------------------
 
-
-Version_of_Text_grabber_gui_string = f"Text Grabber Version: v{Version_of_Text_grabber}"
 
 
 Window_Text_grabber = ttkbootstrap.Window
@@ -194,7 +214,10 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
     def change_to_mod_dir(Entered_path_to_mod_2):
 
         if Entered_path_to_mod_2 == "":
-            folder_selected = filedialog.askdirectory(title="Select MOD folder")
+            folder_selected = os.path.normpath(filedialog.askdirectory(title="Select MOD folder"))
+            if folder_selected  == ".":
+                exit_prog()
+
             if not folder_selected:
                 exit_prog()
             Entered_path_to_mod_2 = folder_selected
@@ -213,6 +236,9 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
     Loadfolder_module.main(S.Game_language)
     printy('Loadfolder_module... Done', 'n')
     print()
+
+
+    #   TODO: rewrite all Loadfolder and parent adding
 
     files_to_translate = Loadfolder_module.files_to_translate_path
     files_to_translate_name = Loadfolder_module.files_to_translate_name
@@ -256,12 +282,12 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
         for idx_1, fi_w_name in enumerate(list_of_files):
             try:
                 good_parent = False
-                if "/Patches/" not in fi_w_name:
+                if "\\Patches\\" not in fi_w_name:
                     if not fi_w_name.endswith("loadFolders.xml"):
-                        if "/Patches/" not in fi_w_name:
-                            if "/Defs/" in fi_w_name:
+                        if "\\Patches\\" not in fi_w_name:
+                            if "\\Defs\\" in fi_w_name:
                                 good_parent = True
-                            elif fi_w_name.startswith('Defs/'):
+                            elif fi_w_name.startswith('Defs\\'):
                                 good_parent = True
                 if good_parent:
                     # print("     Чтение из " + fi_w_name)
@@ -274,7 +300,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                 printy(fr"[r]\[ERROR\]@ Не открывается файл {escape_printy_string(fi_w_name)}", predefined='<m')
 
                 Error_log.append(f"Не открывается файл {fi_w_name}")
-        pass
+
 
     Go_search_Name_class(files_to_translate)
     parent_files_path = []
@@ -283,7 +309,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
 
     Floodgauge['value'] = 10
-    printy("Checking parents",'n')
+    printy("Checking parents", 'n')
 
     def add_parent_foler_path_from_path(parent_files_path2: list, adding_pathes: list):
         for parent_path in adding_pathes:
@@ -294,17 +320,22 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
             for path, subdirs, files in os.walk(os.path.normpath(parent_path)):
                 for file in files:
                     if file.endswith('.xml'):
-                        parent_files_path2.append(path.replace("\\", "/") + "/" + file)
+                        parent_files_path2.append(path + "\\" + file)
 
     if S.Path_to_Data and file_exists(S.Path_to_Data):
         add_parent_foler_path_from_path(parent_files_path, [S.Path_to_Data])
 
-    if file_exists(r"About//About.xml"):
+    if file_exists("About\\About.xml"):
         p_folders_ = []
         if S.Path_to_Mod_folder and file_exists(S.Path_to_Mod_folder):
-            p_folders_ = p_folders_ + parent_folders(S.Path_to_Mod_folder, r"About//About.xml")
+            mod_folder_par = parent_folders(S.Path_to_Mod_folder, "About\\About.xml")
+            if mod_folder_par:
+                p_folders_.extend(mod_folder_par)
         if S.Path_to_Another_folder and file_exists(S.Path_to_Another_folder):
-            p_folders_ = p_folders_ + parent_folders(S.Path_to_Another_folder, r"About//About.xml")
+            another_folder_par = parent_folders(S.Path_to_Another_folder, "About\\About.xml")
+            if another_folder_par:
+                p_folders_.extend(another_folder_par)
+
         if p_folders_:
             add_parent_foler_path_from_path(parent_files_path, p_folders_)
 
@@ -325,11 +356,11 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
         # print(Loadfolder_module.path_to_Patch)
         for path_of_patch_folder in Loadfolder_module.path_to_Patch:
             for path, subdirs, files in os.walk(
-                    "Patches" if path_of_patch_folder == "" else path_of_patch_folder + "/Patches"):
+                    "Patches" if path_of_patch_folder == "" else path_of_patch_folder + "\\Patches"):
                 for name in files:
                     if name.endswith(".xml"):
                         # TODO: коммент попытка в патчи
-                        patch_fullpath.append(os.path.join(path, name).replace("\\", '/'))
+                        patch_fullpath.append(os.path.join(path, name))
         full_path_to_label_patch = []
         if patch_fullpath:
             print('\t', end='')
@@ -345,8 +376,8 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                             pass
                         else:
                             full_path_to_label_patch.append(patch_path)
-                            patch_new_fullpath.append("_Translation/" + str(
-                                patch_path.replace("/Patches/", "/_Patches_to_translate/").rpartition("/")[0]))
+                            patch_new_fullpath.append("_Translation\\" + str(
+                                patch_path.replace("\\Patches\\", "\\_Patches_to_translate\\").rpartition("\\")[0]))
             except ET.ParseError:
                 Error_log.append("Ошибка чтения " + patch_path + "\n\n")
 
@@ -371,7 +402,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                 root.remove(o_t_d)
             dst_path = patch_new_fullpath[idx]
             os.makedirs(dst_path, exist_ok=True)
-            with open(dst_path + "/" + str(patch.rpartition("/")[2]), 'wb') as xml_file:
+            with open(dst_path + "\\" + str(patch.rpartition("\\")[2]), 'wb') as xml_file:
                 tree.write(xml_file, encoding="utf-8")
         printy("Copy patches... Done",'n')
         print()
@@ -867,7 +898,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
             # ET.dump(elem)
             if first_time_start:
                 for child in elem:
-                    tag = child.tag.partition("/")[0]
+                    tag = child.tag.partition("\\")[0]
                     if tag == "AlienRace.ThingDef_AlienRace":
                         child.tag = child.tag.replace('AlienRace.ThingDef_AlienRace', 'ThingDef')
                     # atr = child_.get('Class')
@@ -875,32 +906,32 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                     #     if tag != 'ThingDef':
                     #         child_.tag = atr
 
-            if elem.tag.partition("/")[0] == "RulePackDef":
+            if elem.tag.partition("\\")[0] == "RulePackDef":
                 RulePackDef_def(elem)
-            if elem.tag.partition("/")[0] == "BodyDef":
+            if elem.tag.partition("\\")[0] == "BodyDef":
                 BodyDef_rename_li(elem)
-            if elem.tag.partition("/")[0] == "PawnKindDef":
+            if elem.tag.partition("\\")[0] == "PawnKindDef":
                 pawnKind_add_strings(elem)  # Если PawnKindDef, то добавить необходимые labelPlural
-            if elem.tag.partition("/")[0] == "ScenarioDef":
+            if elem.tag.partition("\\")[0] == "ScenarioDef":
                 ScenarioDef_add_strings(elem)  # Если ScenarioDef, то добавить ['name', 'description'] в scenario
-            if elem.tag.partition("/")[0] == "DamageDef":
+            if elem.tag.partition("\\")[0] == "DamageDef":
                 DamageDef_add_strings(elem)
-            if elem.tag.partition("/")[0] == "ThingDef":
+            if elem.tag.partition("\\")[0] == "ThingDef":
                 comps_Li_Class_Replace(elem)
                 add_missing_verbs_if_verbClass(elem)
                 ThingDef_add_strings(elem)
-            if elem.tag.partition("/")[0] == "AlienRace.BackstoryDef":
+            if elem.tag.partition("\\")[0] == "AlienRace.BackstoryDef":
                 add_title_short(elem)
-            if elem.tag.partition("/")[0] == "AlienRace.AlienBackstoryDef":
+            if elem.tag.partition("\\")[0] == "AlienRace.AlienBackstoryDef":
                 add_title_short(elem)
-            if elem.tag.partition("/")[0] == "BackstoryDef":
+            if elem.tag.partition("\\")[0] == "BackstoryDef":
                 BackstoryDef_add_title_short(elem)
-            if elem.tag.partition("/")[0] == "TraitDef":
+            if elem.tag.partition("\\")[0] == "TraitDef":
                 TraitDef_add_strings(elem)
-            if elem.tag.partition("/")[0] == "QuestScriptDef":
+            if elem.tag.partition("\\")[0] == "QuestScriptDef":
                 if S.Tkey_system_on:
                     Tkey_system_QuestScriptDef(elem)
-            if elem.tag.partition("/")[0] == "XmlExtensions.SettingsMenuDef":
+            if elem.tag.partition("\\")[0] == "XmlExtensions.SettingsMenuDef":
                 XmlExtensions_SettingsMenuDef(elem)
 
             def adding_in_string(stringa, elem_path_: str, child_: ET.Element, print_now: bool = False):
@@ -915,11 +946,11 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                 text1 = text1.replace(' -- ', ' - ')
 
                 try:
-                    _, folder_, defname, path = elem_path_.split('/', 3)
-                    path = path.replace('/', '.') + '.' + child_.tag.replace('/', '.')
+                    _, folder_, defname, path = elem_path_.split('\\', 3)
+                    path = path.replace('\\', '.') + '.' + child_.tag.replace('\\', '.')
                 except ValueError:
-                    _, folder_, defname = elem_path_.split('/', 3)
-                    path = child_.tag.replace('/', '.')
+                    _, folder_, defname = elem_path_.split('\\', 3)
+                    path = child_.tag.replace('\\', '.')
 
                 if print_now:
                     if text1.isspace():
@@ -928,7 +959,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
                     return None
 
-                if re.match(r"\d", elem_path_.partition("Def/")[2]):
+                if re.match(r"\d", elem_path_.partition("Def\\")[2]):
                     Error_log.append(f"Defname start with digit - that cause XML error: {elem_path_}")
                     printy(
                         fr"Skipping string {elem_path_ + '/' + child_.tag : <75} [r]Defname start with digit - that cause XML error: {elem_path_}@",
@@ -936,7 +967,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                     return None
 
                 for _ in tag_endwith_skip:
-                    if f"{elem_path_ + '/' + child_.tag : <100}".endswith(_):
+                    if f"{elem_path_}\\{child_.tag : <100}".endswith(_):
                         print(f"Skipping string {elem_path_ + '/' + child_.tag : <75} text: {text1} ", end='')
                         printy(f"[r]Tag endwith {_}@")
 
@@ -951,9 +982,9 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                 if "_" in text1:
                     if " " not in text1:
                         if child_.tag in S.Tags_to_extraction:
-                            if elem_path_.count("/") < 2:  # Проверка пути, есть ли там, что-то кроме tag
+                            if elem_path_.count("\\") < 2:  # Проверка пути, есть ли там, что-то кроме tag
                                 return None
-                            if elem_path_.rpartition('/')[0] == "comps":
+                            if elem_path_.rpartition('\\')[0] == "comps":
                                 printy(f"[r] VERY Strange string : {elem_path_}", end="")
                                 print(f'{child_.tag} {text1}')
                                 stringa.append(FolderDefnamePathText(folder_, defname, "", text1))
@@ -973,8 +1004,8 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                     return None
 
                 for fp in S.Forbidden_part_of_path:
-                    ep = sub("/[0-9]+/", "/li/", elem_path_)
-                    ep = sub("/[0-9]+$", "/li", ep)
+                    ep = sub("\\\\[0-9]+\\\\", r"\\li\\", elem_path_)
+                    ep = sub("\\\\[0-9]+$", r"\\li", ep)
                     if fp in ep:
                         printy(
                             f"Skipping string {elem_path_.replace(fp, '[r]' + fp + '@') + '/' + child_.tag : <75} [r]Forbidden path: '{escape_printy_string(fp)}'@")
@@ -984,9 +1015,9 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                         printy(
                             f"Skipping string {elem_path_ + '/' + child_.tag.replace(fp, '[r]' + fp + '@') : <75} text: '{escape_printy_string(text1)}' [r]Forbidden part of tag '{escape_printy_string(fp)}'@")
                         return None
-                if elem_path_.count("/") < 2:  # Проверка пути, есть ли там, что-то кроме tag
+                if elem_path_.count("\\") < 2:  # Проверка пути, есть ли там, что-то кроме tag
                     return None
-                if elem_path_.rpartition('/')[0] == "comps":
+                if elem_path_.rpartition('\\')[0] == "comps":
                     printy(f"[r] VERY Strange string : {elem_path_}", end="")
                     print(f'{child_.tag} {text1}')
                     stringa.append(FolderDefnamePathText(folder_, defname, "", text1))
@@ -996,16 +1027,19 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
             def replace_defname(child_: ET.Element):
                 # warning(f"Search Defname in {child.tag}")
-                a1 = child_.find('./defName')
+                a1 = child_.find('.\\defName')
                 if a1 is None:
-                    a1 = child_.find('./defname')
+                    a1 = child_.find('.\\defname')
                 if a1 is None:
-                    a1 = child_.find('./Defname')
+                    a1 = child_.find('.\\Defname')
                 if a1 is None:
-                    a1 = child_.find('./DefName')
+                    a1 = child_.find('.\\DefName')
                 if a1 is None:
-                    a1 = child_.find('defname')
-
+                    a1 = child_.find('defName')
+                if a1 is None:
+                    a1 = child_.find('Defname')
+                if a1 is None:
+                    a1 = child_.find('DefName')
                 if a1 is not None:
                     # warning(f"Find Defname {a1.text}")
                     if " " in a1.text:
@@ -1014,10 +1048,10 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                         printy(
                             f'Replacing defName [<r]{child_.tag + "/" + escape_printy_string(a1.text)}@ to [r>]{child_.tag + "/" + escape_printy_string(a1.text.replace(" ", "_"))}@')
 
-                        child_.tag = child_.tag + "/" + a1.text
+                        child_.tag = child_.tag + "\\" + a1.text
 
                     else:
-                        child_.tag = child_.tag + "/" + a1.text.replace(" ", "_")
+                        child_.tag = child_.tag + "\\" + a1.text.replace(" ", "_")
 
             for child in elem:
 
@@ -1053,7 +1087,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                     else:
 
                         replace_child_li(child)
-                    print_path_of_elems(child, root3, "%s/%s" % (elem_path, child.tag))
+                    print_path_of_elems(child, root3, "%s\\%s" % (elem_path, child.tag))
 
         global exitString
         global folder
@@ -1125,21 +1159,23 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
             # print("Начало разбивания файла на папки")
             for folder_idx, f1 in enumerate(Folders):
-                file_path1 = file_path + "/" + f1
+                file_path1 = file_path + "\\" + f1
+                printy(f"{file_path1=}")
+
 
                 if S.Not_rename_files:
                     file_name1 = file_name.rpartition(".xml")[0]
                 else:
-                    if len(file_path1 + "/" + file_name + "_" + str(f1).rpartition('.')[2].rpartition('_')[2]) < 140:
+                    if len(file_path1 + "\\" + file_name + "_" + str(f1).rpartition('.')[2].rpartition('_')[2]) < 140:
                         file_name1 = file_name.rpartition(".xml")[0] + "_" + str(f1).rpartition('.')[2].rpartition('_')[2]
                     else:
                         printy(f'{" "*15}[y<]{escape_printy_string(f1): <20}\\{escape_printy_string(file_full_path)}@ --> [r]The path is too long@ -> Reducing filemane + counter')
                         file_name1 = file_name.rpartition(".xml")[0].rpartition(".")[2].rpartition("_")[2] + str(fl_idx) + "_" + str(folder_idx)
 
-                file_path_plus_name = file_path1 + "/" + file_name1 + ".xml"
+                file_path_plus_name = file_path1 + "\\" + file_name1 + ".xml"
                 # print("New name/path:" + file_path_plus_name.partition('_Translation/')[2])
 
-                printy(f'Folder: [y<]{escape_printy_string(f1): <20}@  File: [y<]{escape_printy_string(file_full_path)}@ --> [<y]{file_path_plus_name.partition("_Translation/")[2]}@')
+                printy(f'Folder: [y<]{escape_printy_string(f1): <20}@  File: [y<]{escape_printy_string(file_full_path)}@ --> [<y]{file_path_plus_name.partition("_Translation")[2]}@')
 
                 if file_exists(file_path_plus_name):
                     with open(file_path_plus_name, "r", encoding="utf-8") as Write_file:
@@ -1153,7 +1189,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
                 if S.Add_filename_comment:
                     text_body.append("<!--" + file_full_path.replace('_Translation', "").replace(
-                        '/Languages/' + S.Game_language + "/Defs_to_translate", "/Defs") + "-->")
+                        '\\Languages\\' + S.Game_language + "\\Defs_to_translate", "\\Defs") + "-->")
 
 
                 add_new_line_at_new_defname_Boolean = True
@@ -1263,8 +1299,8 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
             # print('\n'.Folder_and_text_1[0])
             # print('\n'.join(Folder_and_text_1[1]))
         except ET.ParseError:
-            Error_log.append("Ошибка чтения " + fil.partition("_Translation/")[2].replace("Defs_to_translate", "Defs")
-                              .replace("Languages/" + S.Game_language + "/", "") + "\n\n")
+            Error_log.append("Ошибка чтения " + fil.partition("_Translation")[2].replace("Defs_to_translate", "Defs")
+                              .replace("Languages\\" + S.Game_language + "\\", "") + "\n\n")
 
             print("Пропуск файла")
             # input("Press Enter to continue")
@@ -1295,7 +1331,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
     if S.Delete_old_versions_translation:
         try:
             printy("Delete old versions", 'n')
-            folders_in__translation = glob.glob("_Translation/*/", recursive=False)
+            folders_in__translation = glob.glob("_Translation\\*\\", recursive=False)
             folders_name_in__translation = [sub('_Translation\\\\(.*)\\\\', '\\1', i) for i in folders_in__translation]
             versions_name_in__translation = [float(i) for i in folders_name_in__translation if is_version(i)]
             if versions_name_in__translation:
@@ -1303,7 +1339,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                 for version in versions_name_in__translation:
                     if version != max_version:
                         version = str(version)
-                        rmtree(f"_Translation//{version}")
+                        rmtree(f"_Translation\\{version}")
             printy("Delete old versione... Done", 'n')
             print()
 
@@ -1343,18 +1379,18 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                     elif li.text is not None:
                         try:
                             if S.Delete_old_versions_translation:
-                                if v_cur == float(li.text.partition("/")[0]):
+                                if v_cur == float(li.text.partition("\\")[0]):
                                     li.text = li.text.replace(str(v_cur), str(max_v))
                         except ValueError:
                             print(" Not a float")
-                        if not file_exists("_Translation/" + li.text):
+                        if not file_exists("_Translation\\" + li.text):
                             printy(f"   Not need folder [<y]{escape_printy_string(li.text)}@ --> Removing")
 
                             v.remove(li)
-            tree1.write('_Translation/loadFolders.xml')
+            tree1.write('_Translation\\loadFolders.xml')
 
             def check_necessity_loadfolder():
-                with open('_Translation/loadFolders.xml', 'r', encoding="utf-8") as xml_file:
+                with open('_Translation\\loadFolders.xml', 'r', encoding="utf-8") as xml_file:
                     tree1 = ET.parse(xml_file)
                 root1 = tree1.getroot()
                 for v in reversed(root1):
@@ -1366,8 +1402,8 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                                 printy("Loadfolder.xml remove empty folders... Done", 'n')
                                 print()
                                 return
-                if file_exists('_Translation//loadFolders.xml'):
-                    os.remove(f"_Translation//loadFolders.xml")
+                if file_exists('_Translation\\loadFolders.xml'):
+                    os.remove(f"_Translation\\loadFolders.xml")
                     printy("Loadfolder.xml remove empty folders... Done --> [r]Loadfolder.xml not needed.@",
                            predefined='n')
                     print()
@@ -1383,7 +1419,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
         # folders_name_in__translation = [sub('_Translation\\\\(.*)\\\\', '\\1', i) for i in folders_in__translation]
         # versions_name_in__translation = [float(i) for i in folders_name_in__translation if is_version(i)]
 
-        if file_exists("_Translation//Languages"):
+        if file_exists("_Translation\\Languages"):
             try:
                 with os.scandir('_Translation') as scandir:
                     versions_name_in__translation = [entry.name for entry in scandir if
@@ -1407,8 +1443,8 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
     def Rename_Keyed_files():
         try:
-            if file_exists("About/About.xml"):
-                tree3 = ET.parse("About/About.xml")
+            if file_exists("About\\About.xml"):
+                tree3 = ET.parse("About\\About.xml")
                 name_of_mod = tree3.getroot().find("name").text.replace(" ", "_")
                 name_of_mod = "".join(x for x in name_of_mod if x.isalnum())
                 for path, subdirs, files in os.walk(f'_Translation'):
@@ -1424,6 +1460,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
         Rename_Keyed_files()
 
     if S.Add_comment:
+        printy("Add Comments into Keyed", 'n')
         parser_no_delete_comments = XMLParser(remove_comments=False, remove_blank_text=False, remove_pis=True)
         for path, subdirs, files in os.walk(f'_Translation'):
             for name in files:
@@ -1433,6 +1470,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                             tree = etree.parse(Keyed_file, parser_no_delete_comments)
                             root = tree.getroot()
                             root.text = f'\n{S.tags_left_spacing}'
+
                             for line in root:
                                 # input(line.text + f' tail = {line.tail.encode()}')
                                 if line.tag is not etree.Comment:
@@ -1447,38 +1485,42 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                                     else:
                                         root.text = '\n' + f'\t\t'
                                 line.tail = '\n' * (line.tail.count('\n')) + f'{S.tags_left_spacing}'
-                            root[-1].tail = '\n'
-
+                            try:
+                                root[-1].tail = '\n'
+                            except IndexError:
+                                printy("[r]\tIndex Error at {path}\\{name}")
                         with open(f"{path}\\{name}", "wb") as Keyed_file:
                             Keyed_file.write(etree.tostring(root,  encoding="utf-8"))
                     except Exception as ex:
                         warning("Bad Keyed Comment adding" + str(ex))
                         Error_log.append("Bad Keyed Comment adding" + str(ex))
+        printy("Add Comments into Keyed... Done", 'n')
+        print()
 
 
     global New_Name
 
-    if file_exists('About/About.xml'):
+    if file_exists('About\\About.xml'):
 
         def make_about_folder():
             global New_Name
             printy('Make About folder', 'n')
-            s1_path = "About/preview.png"
-            d_path = "_Translation/About"
+            s1_path = "About\\preview.png"
+            d_path = "_Translation\\About"
 
             def get_steam_id_PublishedFileId() -> str:
                 try:
-                    path = 'About/PublishedFileId.txt'
+                    path = 'About\\PublishedFileId.txt'
                     with open(path, 'r') as PublishedFileId:
                         steam_id = PublishedFileId.read()
-                    return 'https://steamcommunity.com/sharedfiles/filedetails/?id=' + steam_id
+                    return 'https:/steamcommunity.com/sharedfiles/filedetails/?id=' + steam_id
                 except Exception as ex:
                     return ''
 
             os.makedirs(d_path, exist_ok=True)
             if file_exists(s1_path):
                 shcopy(s1_path, d_path)
-            tree3 = ET.parse("About/About.xml")
+            tree3 = ET.parse("About\\About.xml")
             root3 = tree3.getroot()
 
             mod_url = f'{get_steam_id_PublishedFileId()}'
@@ -1494,7 +1536,14 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                 return b
 
             name = root3.find("name").text
-            description = root3.find("description").text
+            description = root3.find("description")
+            if description is not None:
+                if description.text is not None:
+                    description = description.text
+                else:
+                    description = ""
+            else:
+                description = ""
             packageId = root3.find("packageId").text
             New_Name = S.New_Name_before_replace.replace("~MOD_NAME~", name)
             supportedVersions = get_supportedVersions()
@@ -1503,30 +1552,35 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                 if len(S.Author + "." + packageId.partition(".")[0]) > 60:
                     New_packageId = "NEED_LESS_60_SYMBOLS.ERROR"
                 else:
-                    New_packageId = S.Author + "." + packageId.partition(".")[0]
+                    New_packageId = S.Author.replace(" ", "") + "." + packageId.partition(".")[0]
             else:
-                New_packageId = S.Author + "." + packageId
+                New_packageId = S.Author.replace(" ", "") + "." + packageId
             modDependencies = f"""
 		<li>
 			<packageId>{packageId}</packageId>
 			<displayName>{name}</displayName>
 			<steamWorkshopUrl>{mod_url}</steamWorkshopUrl>
 		</li>""" if S.Add_mod_Dependence else ""
-            new_desc = S.Description.replace("~MOD_NAME~", name).replace("~MOD_DESCRIPTION~", description).replace(
-                "~MOD_URL~", mod_url)
+            if include_in_QOL:
+                new_desc = include_in_QOL_description.replace("~MOD_NAME~", name).replace("~MOD_DESCRIPTION~", description).replace(
+                    "~MOD_URL~", mod_url)
+            else:
+                new_desc = S.Description.replace("~MOD_NAME~", name).replace("~MOD_DESCRIPTION~", description).replace(
+                    "~MOD_URL~", mod_url)
             about_text = f'''<ModMetaData>
 	<name>{New_Name}</name>
 	<author>{S.Author}</author>
 	<packageId>{New_packageId}</packageId>
 	<supportedVersions>{supportedVersions}</supportedVersions>
-	<modDependencies>{modDependencies}</modDependencies>
+	<modDependencies>{modDependencies}
+	</modDependencies>
 	<loadAfter>
 		<li>{packageId}</li>
-	</loadAfter>
+	</loadAfter>{incompatibleWith_QOL if include_in_QOL else ''}
 	<description>{new_desc}</description>
 </ModMetaData>'''
 
-            with open('_Translation/About/About.xml', "w", encoding='utf-8') as f:
+            with open('_Translation\\About\\About.xml', "w", encoding='utf-8') as f:
                 f.write(about_text)
             printy('Make About folder... Done', 'n')
             print()
@@ -1712,6 +1766,8 @@ class TestApp(ttk_boot.Window):
 
         }
 
+
+
         def Pause_checkbox_var_callback(*_):
             if Pause_checkbox_var.get():
                 Show_console_checkbox_var.set(True)
@@ -1727,7 +1783,7 @@ class TestApp(ttk_boot.Window):
 
         self.menubtn.pack(anchor='sw', side='left', fill='both', pady=(5, 0))
 
-        self.settings_image = ttk_boot.ImageTk.PhotoImage(file="Images//Settings_icon.png", master=self)
+        self.settings_image = ttk_boot.ImageTk.PhotoImage(file="Images\\Settings_icon.png", master=self)
 
         def run_settings_gui():
             Window_Text_grabber.withdraw()
@@ -1784,6 +1840,17 @@ class TestApp(ttk_boot.Window):
         """ function to deiconify or window """
         self.overrideredirect(True)
 
+    def update_fast_checkBTNs(self):
+        def include_in_QOL_bool_switch():
+            global include_in_QOL
+            include_in_QOL = include_in_QOL_bool.get()
+            print(f"{include_in_QOL=}")
+
+        if S.Author != 'Kamikadza13':
+            return
+
+        include_in_QOL_bool = ttk_boot.BooleanVar(value=False)
+        self.menu.add_checkbutton(label="Включено в QOL",variable=include_in_QOL_bool,command=include_in_QOL_bool_switch)
 
 def go_main(path):
     Window_Text_grabber.disable_btns_switch(True)
@@ -1855,6 +1922,13 @@ if __name__ == '__main__':
     def settings_get_value_error():
         Text_grabber_settings.main_from_prog(Window_Text_grabber)
 
+    def updater():
+        if S.Check_update:
+            if Check_New_Version.Check_And_Update(Version_of_Text_grabber):
+                Window_Text_grabber.destroy()
+            else:
+                printy(f"Latest version {Version_of_Text_grabber}", 'n')
+
 
     Window_Text_grabber.after(10, lambda: set_appwindow(root=Window_Text_grabber))
 
@@ -1868,6 +1942,9 @@ if __name__ == '__main__':
             Window_Text_grabber.withdraw()
 
             Window_Text_grabber.after(100, lambda: settings_get_value_error())
+
+    Window_Text_grabber.update_fast_checkBTNs()
+    Window_Text_grabber.after(100, lambda: updater())
 
     # update_settings()
 

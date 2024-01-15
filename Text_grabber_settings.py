@@ -1,4 +1,5 @@
 import configparser
+import ctypes
 import gettext
 import os
 import shutil
@@ -6,20 +7,19 @@ import sys
 import tkinter as tk
 from ctypes import windll
 from dataclasses import dataclass
+from os.path import exists as file_exists
 from tkinter import PhotoImage
 from tkinter import filedialog
-from varname import varname
-import appdirs
-from os.path import exists as file_exists
 
+import appdirs
 import ttkbootstrap as ttk
+from printy import printy
+from result import Result, Ok, Err, is_ok
 from ttkbootstrap.dialogs.dialogs import Messagebox
 from ttkbootstrap.tooltip import ToolTip
-from result import Result, Ok, Err, is_err, is_ok
 
-import locale
 import image_edit
-
+import locale
 
 Window_Text_grabber: ttk.Window
 Window_Hidden: ttk.Toplevel
@@ -110,6 +110,7 @@ Path_to_Another_folder = None
 Delete_old_versions_translation = True
 Merge_folders = True
 Not_rename_files = False
+Check_update = True
 
 [Comment]
 Add_filename_comment = True
@@ -250,6 +251,8 @@ ScenPart_='''
 
 
 class TestApp(ttk.Toplevel):
+
+
 
     def __init__(self, master_widget):
         global Window_settings_app
@@ -442,12 +445,10 @@ class TestApp(ttk.Toplevel):
 
         self.General_Settings_frame.Frame6 = ttk.Labelframe(self.General_Settings_frame,
                                                             text=_("Extraction files rules"))
-        self.General_Settings_frame.Frame6.pack(anchor=tk.W)
-        # self.General_Settings_frame.Frame6.Label = ttk.Label(self.General_Settings_frame.Frame6, text=_("Extraction files rules"))
-        # self.General_Settings_frame.Frame6.Label.pack(pady=(20, 0))
+        self.General_Settings_frame.Frame6.pack(anchor=tk.N, side=tk.LEFT)
 
         self.General_Settings_frame.Frame_left = ttk.Frame(self.General_Settings_frame.Frame6, padding=10)
-        self.General_Settings_frame.Frame_left.pack(anchor=tk.W, side=tk.LEFT)
+        self.General_Settings_frame.Frame_left.pack(anchor=tk.W)
 
         self.Delete_old_versions_language = ttk.BooleanVar(value=SettingsValues.Delete_old_versions_translation)
 
@@ -499,6 +500,30 @@ class TestApp(ttk.Toplevel):
             self.General_Settings_frame.Frame_left.Not_rename, text=_(
                 "Files are automatically renamed depending on the folders they fall into. This is necessary to prevent the files from having the same names, which may lead to the fact that the game will not read the translation files.\n"
                 "(Check the box if you don't like it and you want to keep the original titles)"), wraplength=320)
+
+        self.General_Settings_frame.Frame7 = ttk.Labelframe(self.General_Settings_frame,
+                                                            text=_("Update"))
+        self.General_Settings_frame.Frame7.pack(anchor=tk.N, side=tk.LEFT, padx=(5,0))
+
+        self.General_Settings_frame.Frame7.F1 = ttk.Frame(self.General_Settings_frame.Frame7, padding=10)
+        self.General_Settings_frame.Frame7.F1.pack()
+
+
+        self.Check_update = ttk.BooleanVar(value=SettingsValues.Check_update)
+
+        def General_Settings_frame_Frame7Update_ckeckbtn():
+            SettingsValues.Check_update = bool(self.Check_update.get())
+            config.set("General", "Check_update", str(SettingsValues.Check_update))
+            settings_config_update_write()
+
+
+        self.General_Settings_frame.Frame7.F1.Update_ckeckbtn = ttk.Checkbutton(self.General_Settings_frame.Frame7.F1,
+                                                                            text=_("Check updates"),
+                                                                            variable=self.Check_update,
+                                                                            command=General_Settings_frame_Frame7Update_ckeckbtn)
+        self.General_Settings_frame.Frame7.F1.Update_ckeckbtn.pack(anchor=tk.W, pady=(0, 0))
+        self.General_Settings_frame.Frame7.F1.Update_ckeckbtn.ToolTip = ToolTip(
+            self.General_Settings_frame.Frame7.F1.Update_ckeckbtn, text=_("Check updates from GitHub and Download it if find new version"), wraplength=320)
 
         # -- COMMENT SETTINGS FRAME
         # -- ----------------------
@@ -1076,7 +1101,7 @@ class TestApp(ttk.Toplevel):
             text = f'''<ModMetaData>
 	<name>{SettingsValues.New_Name_before_replace.replace("~MOD_NAME~", "Example mod")}</name>
 	<author>{SettingsValues.Author}</author>
-	<packageId>{SettingsValues.Author}.example1</packageId>
+	<packageId>{SettingsValues.Author.replace(' ', "")}.example1</packageId>
 	<supportedVersions>
 		<li>1.3</li>
 		<li>1.4</li>
@@ -1429,8 +1454,7 @@ class TestApp(ttk.Toplevel):
         self.Top_Notebook.add(self.Preview, text=_('Preview'))
         self.Top_Notebook.add(self.Advanced_Frame, text=_('Advanced settings'))
 
-
-
+        self.bind_all("<Key>", self._onKeyRelease, "+")
         self.after(1, lambda: self.Top_Notebook.focus_set())
         self.raise_tab(0)
         self.geometry("1000x800+200+200")
@@ -1488,6 +1512,17 @@ class TestApp(ttk.Toplevel):
         else:
             Window_Text_grabber.deiconify()
 
+    def _onKeyRelease(self, event):
+        self.ctrl = (event.state & 0x4) != 0
+        if event.keycode == 88 and self.ctrl and event.keysym.lower() != "x":
+            event.widget.event_generate("<<Cut>>")
+
+        if event.keycode == 86 and self.ctrl and event.keysym.lower() != "v":
+            event.widget.event_generate("<<Paste>>")
+
+        if event.keycode == 67 and self.ctrl and event.keysym.lower() != "c":
+            event.widget.event_generate("<<Copy>>")
+
 
 class SettingsValues:
     class SettingsPath:
@@ -1544,6 +1579,8 @@ class SettingsValues:
     Merge_folders = True
     Not_rename_files = False
 
+    Check_update = True
+
     #   [Comments]
     Add_filename_comment = True
     Add_comment = True
@@ -1575,7 +1612,7 @@ class SettingsValues:
 
 
     #  [About.xml]
-    Author = 'Kamikadza13'
+    Author = 'Kamikadza13 ^_^'
     New_Name_before_replace = '~MOD_NAME~ rus'
     Add_mod_Dependence = True
     Description = ''
@@ -1610,7 +1647,7 @@ settings_unfouded_values: list[SettingsUnfouded]
 settings_unfouded_values = []
 
 def settings_config_update_write():
-    with open(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.General_settings_path, 'w') as aaa:
+    with open(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.General_settings_path, 'w', encoding='utf-8') as aaa:
         config.write(aaa)
 
 
@@ -1633,6 +1670,11 @@ def get_settings_language() -> Result[str, str]:
         SettingsValues.Settings_language = config.get('General', 'Settings_language')
         return Ok(SettingsValues.Settings_language)
     except Exception as ex:
+        ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 4)
+        printy("[r]READING ERROR Message vvv@")
+        print(str(ex))
+        printy("[r]READING ERROR Message ^^^@")
+        shutil.rmtree(os.path.dirname(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.General_settings_path), ignore_errors=True)
 
         os.makedirs(os.path.dirname(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.General_settings_path), exist_ok=True)
         with open(SettingsValues.SettingsPath.SettingsPath_AppData + "\\" + SettingsValues.SettingsPath.General_settings_path, 'w', encoding="utf8") as ini:
@@ -1661,6 +1703,9 @@ def get_config_values(stop_on_error=False) -> Result[SettingsValues, None]:
                                                                                'Delete_old_versions_translation')
             SettingsValues.Merge_folders = config.getboolean('General', 'Merge_folders')
             SettingsValues.Not_rename_files = config.getboolean('General', 'Not_rename_files')
+
+            SettingsValues.Check_update = config.getboolean('General', 'Check_update')
+
 
             SettingsValues.Add_filename_comment = config.getboolean('Comment', 'Add_filename_comment')
             SettingsValues.Add_comment = config.getboolean('Comment', 'Add_comment')

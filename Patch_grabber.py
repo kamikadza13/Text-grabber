@@ -1,8 +1,11 @@
 import copy
 import os
 import re
-import lxml.etree as etree
 from dataclasses import dataclass
+from tkinter.filedialog import askdirectory
+
+import lxml.etree as etree
+
 
 @dataclass
 class RootElemAndElems:
@@ -14,7 +17,8 @@ class RootElemAndElems:
 list_of_extract_tags = []
 Parent_name_list, Parent_elem = [], []
 
-patches_folder = os.path.abspath(r"C:\Desktop\1\Patches")
+patches_folder = os.path.normpath(askdirectory())
+# patches_folder = os.path.abspath(r"D:\Games\steamapps\workshop\content\294100\3070780021\Alpha Prefabs rus\1.4\Mods\Ideology\_Patches_to_translate")
 output_folder = patches_folder.rpartition("\\")[0]
 
 patches = []
@@ -42,7 +46,7 @@ def find_patch_pathes():
 
 find_patch_pathes()
 
-with open(r'C:\Text_grabber\Settings\Tag to extraction.txt', encoding="utf8") as tag_file:
+with open(r'C:\Users\kamik\AppData\Roaming\Text_grabber\Settings\E1_Tags_to_extraction.txt', encoding="utf8") as tag_file:
     for line in tag_file:
         list_of_extract_tags.append(line.strip("\n "))
 
@@ -254,6 +258,15 @@ def PatchOperationConditional(Operation_Class_PatchOperationConditional: etree.E
         if ch.tag == "nomatch":
             operation_selector(ch)
 
+def PatchOperationMakeGunCECompatible(Patch_elem: etree.Element):
+    if not any(el.tag == 'defName' for el in Patch_elem):
+        return
+    Patch_elem.tag = 'ThingDef'
+
+    text_final.append(etree.tostring(Patch_elem, pretty_print=True, encoding=str))
+    text_final.append("\n")
+
+
 
 def operation_selector(a: etree.Element):
     Op_class = a.attrib["Class"]
@@ -279,6 +292,10 @@ def operation_selector(a: etree.Element):
             PatchOperationSequence(a)
         case "PatchOperationConditional":
             PatchOperationConditional(a)
+
+        # Combat Extended
+        case "CombatExtended.PatchOperationMakeGunCECompatible":
+            PatchOperationMakeGunCECompatible(a)
 
 
 text_final.append("<Defs>\n")
