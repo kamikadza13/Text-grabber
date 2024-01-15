@@ -1,5 +1,22 @@
 Update log
 
+	TODO: rewrite all Loadfolder and parent adding
+Update 1.3.5
+    Fixed About.xml without description (Thanks to Fluffu for this shitty stuff)
+    Fixed About.xml description like <description /> or <description></description>
+    Fixed Keyed without text (Thanks to Fluffu for this shitty stuff)
+
+
+
+Update 1.3.4
+	Added auto(half manual) update (Checking the latest version at GitHub) ^_^
+	Fixed Bad Copy/Paste in settings
+	Fixed Author with space -> id with space
+	Fixed Non English words in settings (settings reset error)
+
+
+
+
 Update 1.3.3
 	Fixed bad ending space at grabbing rulesStrings etc.
 	Fixed bad reading XmlExtensions.SettingsMenuDef - color tags inside text
