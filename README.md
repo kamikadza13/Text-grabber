@@ -7,11 +7,15 @@ Grab text from xml files
 and create files ready to translate
 
 Before:
+
 ![Screenshot_1](https://github.com/kamikadza13/Text-grabber/assets/57400507/42634cfc-448c-497e-b6ae-54d67135ccb7)
+
 After:  
 > [!RT Fuse rus]
 > A new folder "RT Fuse rus" has been created.
+
 ![Screenshot_2](https://github.com/kamikadza13/Text-grabber/assets/57400507/fdaf16e7-eac0-4267-8e38-932a51ae814c)
+
 Name "RT Fuse" was 
 
 
