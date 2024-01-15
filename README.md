@@ -26,8 +26,8 @@ Open new folder - RT Fuse rus:
 
 You can see new folders with files that require translation.
 
-![](../Desktop/Lightshot/Screenshot_7.png)
-![](../Desktop/Lightshot/Screenshot_8.png)
+![Screenshot_7](https://github.com/kamikadza13/Text-grabber/assets/57400507/1f09399d-9bfa-433f-8a40-9cd87f5e45ba)
+![Screenshot_8](https://github.com/kamikadza13/Text-grabber/assets/57400507/f29043a1-d69f-4d73-add9-31ee3ebf857a)
 
 
 
