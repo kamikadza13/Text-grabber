@@ -31,6 +31,7 @@ You can see new folders with files that require translation.
 
 ## About.xml
 
+![Screenshot_9](https://github.com/kamikadza13/Text-grabber/assets/57400507/12b90ad2-1f65-457e-9182-82db543f568f)
 
 New About.xml
 ![Screenshot_6](https://github.com/kamikadza13/Text-grabber/assets/57400507/d8ba79ec-593f-4db0-a4dc-ef86b2d4bcc0)
