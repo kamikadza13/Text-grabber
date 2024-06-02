@@ -1,6 +1,28 @@
 Update log
 
+
+
+
+D:\Games\steamapps\workshop\content\294100\1497105115
+
+
+	TODO: Add patch grabber and integrate it
 	TODO: rewrite all Loadfolder and parent adding
+	TODO: add adding strings into settings
+	
+Update 1.3.7
+	Fixed strange folders with two points name like '1.3.3311' - TY Replace stuff for stupid error.
+	"Keyed" and "Strings" extraction method overwritten
+	some fixes in verbs.li.VerbClass (Mostly because of “Verb_Shoot”, sometimes untranslated text appears on weapon gizmo. The text will be replaced with a blank character)	
+	
+
+	
+
+Update 1.3.6
+	Fixed wrong li counting when in `<li>` was Compclass  
+
+
+	
 Update 1.3.5
     Fixed About.xml without description (Thanks to Fluffu for this shitty stuff)
     Fixed About.xml description like <description /> or <description></description>

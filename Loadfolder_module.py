@@ -1,5 +1,6 @@
 import os
 import xml.etree.ElementTree as ET
+from dataclasses import dataclass
 from glob import glob
 from os.path import exists as file_exists
 from os.path import isfile as isfile
@@ -19,12 +20,20 @@ patches_new_path = []
 files_to_translate_name = []
 files_to_translate_path = []
 
+Language = ''
+
 '''
 (path + "\\" if path != "" else "")
 '''
 
 
-def make_path_to_folders(path: str, Language):
+@dataclass
+class TranslatingFile:
+    path: str
+    name: str
+    new_path: str
+
+def make_path_to_folders(path: str):
     if file_exists((path + "\\" if path != "" else "") + "Defs"):
         path_to_Def.append(path)
         # print("\t\tВ " + path + " cуществует Defs")
@@ -64,7 +73,7 @@ def make_path_to_folders(path: str, Language):
 
 
 
-def make_files_path_to_translate(Language):
+def make_files_path_to_translate():
     printy('\t\tMaking pathes to files', 'y>')
     pathes = set(path_to_Def)
     printy('\t\tFiles:', 'y>')
@@ -84,60 +93,57 @@ def make_files_path_to_translate(Language):
         patches_new_path.append("_Translation\\" + path)
 
 
+def no_loadfolder():
+    printy('\tNo loadFolders.xml', 'y>')
+    pathes = ['']
+    if file_exists('Common') and not isfile('Common'):
+        pathes.append('Common')
+    All_folders = [name for name in os.listdir(".") if os.path.isdir(name)]
+    versions = [folder_name for folder_name in All_folders if folder_name.replace(".", "1").isnumeric()]
+    if versions:
+        pathes.append(max(versions))
+    # print('Cписок pathes  =')
+    # print(pathes)
+    printy('\tSearching Defs, Keyed, Strings, Patches', 'y>')
+    for path in set(pathes):
+        make_path_to_folders(path)
+    make_files_path_to_translate()
 
+def loadfolder():
+    printy('\tloadFolders.xml found', 'y>')
 
-def main(Language):
-    def no_loadfolder():
-        printy('\tNo loadFolders.xml', 'y>')
-
-        pathes = ['']
-        if file_exists('Common') and not isfile('Common'):
-            pathes.append('Common')
-        All_folders = [name for name in os.listdir(".") if os.path.isdir(name)]
-        versions = [folder_name for folder_name in All_folders if folder_name.replace(".", "1").isnumeric()]
-        if versions:
-            pathes.append(max(versions))
-
-        # print('Cписок pathes  =')
-        # print(pathes)
-        printy('\tSearching Defs, Keyed, Strings, Patches', 'y>')
-        for path in set(pathes):
-            make_path_to_folders(path, Language)
-        make_files_path_to_translate(Language)
-
-    def loadfolder():
-        printy('\tloadFolders.xml found', 'y>')
-
-        if not os.path.exists('_Translation'):
-            os.makedirs('_Translation')
-        shcopy("loadFolders.xml", "_Translation\\loadFolders.xml")
-        with open('loadFolders.xml', 'r', encoding="utf-8") as xml_file:
-            tree1 = ET.parse(xml_file)
-        root1 = tree1.getroot()
-        # Папки перевода from loadFolders.xml
-        pathes = []
-        for version in root1:
-            for fold in version:
-                if not any(path == fold.text for path in pathes):
-                    if fold.text is not None:
-                        # print(fold.text)
-                        if fold.text.endswith("/"):
-                            pathes.append(fold.text[:-1].replace("\\", "/"))
-                        else:
-                            pathes.append(fold.text.replace("\\", "/"))
+    if not os.path.exists('_Translation'):
+        os.makedirs('_Translation')
+    shcopy("loadFolders.xml", "_Translation\\loadFolders.xml")
+    with open('loadFolders.xml', 'r', encoding="utf-8") as xml_file:
+        tree1 = ET.parse(xml_file)
+    root1 = tree1.getroot()
+    # Папки перевода from loadFolders.xml
+    pathes = []
+    for version in root1:
+        for fold in version:
+            if not any(path == fold.text for path in pathes):
+                if fold.text is not None:
+                    # print(fold.text)
+                    if fold.text.endswith("/"):
+                        pathes.append(fold.text[:-1].replace("\\", "/"))
                     else:
-                        pathes.append("")
+                        pathes.append(fold.text.replace("\\", "/"))
+                else:
+                    pathes.append("")
 
-        # print('Cписок pathes  =')
-        # print(pathes)
-        printy('\tSearching Defs, Keyed, Strings, Patches', 'y>')
+    # print('Cписок pathes  =')
+    # print(pathes)
+    printy('\tSearching Defs, Keyed, Strings, Patches', 'y>')
 
-        for path in set(pathes):
-            make_path_to_folders(path, Language)
-        make_files_path_to_translate(Language)
+    for path in set(pathes):
+        make_path_to_folders(path)
+    make_files_path_to_translate()
 
+
+def main():
     if file_exists("_Translation"):
-        rmtree("_Translation")
+        rmtree("_Translation", ignore_errors=True)
     if not file_exists('loadFolders.xml'):
         no_loadfolder()
     else:
@@ -145,4 +151,5 @@ def main(Language):
 
 
 if __name__ == '__main__':
-    main("Russian")
+    Language = 'Russian'
+    main()

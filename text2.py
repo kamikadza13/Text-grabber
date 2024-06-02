@@ -1,7 +1,6 @@
-import logging
 import os
 import xml.etree.ElementTree as ET
-
+from os.path import exists as file_exists
 
 Rimworld_mods_folder_path_ = r"D:\Games\steamapps\workshop\content\294100"
 
@@ -59,7 +58,10 @@ def parent_folders(Rimworld_mods_folder_path, about_path):
         packageId = ""
         for idx, f in enumerate(folders_):
             about = f"{f}\\About\\About.xml"
-            root_ = open_about(about)
+            if file_exists(about):
+                root_ = open_about(about)
+            else:
+                root_ = None
             # ET.dump(root_)
             if root_ is not None:
                 for ch in root_:
@@ -98,9 +100,7 @@ def parent_folders(Rimworld_mods_folder_path, about_path):
     dependence_list = read_dependence_from_abot(root)
 
     if Rimworld_mods_folder_path:
-        folders = list(filter(os.path.isdir,
-                              [os.path.join(Rimworld_mods_folder_path, f) for f in
-                               os.listdir(Rimworld_mods_folder_path)]))
+        folders = list(filter(os.path.isdir, [os.path.join(Rimworld_mods_folder_path, f) for f in os.listdir(Rimworld_mods_folder_path)]))
 
         folders_package_id = read_folders_package_id(folders)
         path_to_parents_folder = search_folders_to_add_parent(folders_package_id, dependence_list)
