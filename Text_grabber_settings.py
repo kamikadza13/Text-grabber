@@ -1690,7 +1690,8 @@ def get_config_values(stop_on_error=False) -> Result[SettingsValues, None]:
             a = []
             with open(path, encoding="utf8") as tag_file:
                 for line in tag_file:
-                    a.append(line.strip("\n "))
+                    if not line.startswith(("#", ";")):
+                        a.append(line.strip("\n "))
             return a
 
         try:

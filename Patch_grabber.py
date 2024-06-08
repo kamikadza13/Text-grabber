@@ -1,4 +1,5 @@
 import copy
+import json
 import os
 import re
 import shutil
@@ -22,6 +23,7 @@ class RootElemAndElems:
 
 
 
+
 # Parent_name_list_patch_grabber, Parent_elem_patch_grabber = [], []
 # output_folder = ''
 
@@ -30,6 +32,9 @@ class RootElemAndElems:
 sabaka_names_all_patch_grabber = []
 
 
+patches_file_count = 0
+mod_pathes_and_req_mods: {str, ()} = {}
+mods_folders = {}
 
 
 
@@ -45,12 +50,38 @@ sabaka_names_all_patch_grabber = []
 
 
 
-def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_one_File=False):
+def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_one_File=False, required_mods: list = None, database_path=None):
 
-    list_of_extract_tags_patch_grabber = []
+
+
+    # database_path = r'D:\Games\steamapps\workshop\content\294100\1847679158\db\db.json'
+    data = json.loads(open(database_path, encoding="utf-8").read())
+
+
+
+    list_of_extract_tags_patch_grabber = [ll.strip("\n ") for ll in tags_to_extract]
+
     sibling_list_patch_grabber = []
     Keyed_tags_patch_grabber = []
     Needed_mods = []
+
+    if required_mods:
+        Needed_mods.extend(required_mods)
+
+
+    def add_string_to_output(string_or_EtElement):
+
+        if Needed_mods:
+            need_mods = tuple(Needed_mods)
+        else:
+            need_mods = ()
+
+        if string_or_EtElement is str:
+            text = string_or_EtElement
+        else:
+            text = etree.tostring(string_or_EtElement, pretty_print=True, encoding=str)
+
+        current_grabbed_Mod_and_string_list.append((need_mods, text))
 
 
     def operation_selector(a: etree.Element):
@@ -81,7 +112,7 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
                 #         list_of_elems[idx] = re.sub(fr"\[.*]", '', el)
                 start_pos = 1
                 if ("<" or ">") in list_of_elems[0]:
-                    print("Bad xml creating - add random Thingdef", xpath)
+                    print("Bad xml creating - add random Thingdef", xpath, file)
                     root_node = etree.Element('ThingDef')
                     start_pos = 0
                 else:
@@ -130,7 +161,7 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
             if xpath in ["/", "//", "", "Defs", "/Defs", '//Defs']:
                 for ch in value:
                     if output_not_in_siblings(ch):
-                        current_grabbed_text.append(etree.tostring(ch, pretty_print=True, encoding=str))
+                        add_string_to_output(ch)
 
                 return None
 
@@ -168,7 +199,7 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
             else:
                 # print("xpath without defname")
                 # text_final.append("<!-- xpath without defname -->\n")
-                current_grabbed_text.append(f"<!-- {xpath} -->\n")
+                # current_grabbed_Mod_and_string_list.append(f"<!-- {xpath} -->\n")
                 if "[" in xpath:
                     xpath = re.sub(r"\[.*]", "", xpath)
                     a = re.split(r"/", xpath)
@@ -201,11 +232,9 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
                 # print(f"Добавление элемента: {roots_and_elems.root_tag.tag}")
 
                 if output_not_in_siblings(roots_and_elems.root_tag):
-                    # current_grabbed_text.append(
-                    #     f"<!-- PatchOperationAdd: Be careful, try to ADD at the end of defname-->\n")
-                    current_grabbed_text.append(
-                        etree.tostring(roots_and_elems.root_tag, pretty_print=True, encoding=str))
-                    # current_grabbed_text.append(f"<!-- PatchOperationAdd - EDD-->\n")
+
+                    add_string_to_output(roots_and_elems.root_tag)
+
 
         def PatchOperationReplace(operation_replace: etree.Element):
             xpath = ""
@@ -227,8 +256,7 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
                     for child in value:
                         try:
                             if roots_and_elems.root_tag == roots_and_elems.last_node:
-                                current_grabbed_text.append(
-                                    etree.tostring(roots_and_elems.root_tag, pretty_print=True, encoding=str))
+                                add_string_to_output(roots_and_elems.root_tag)
                                 continue
 
                             _ = roots_and_elems.last_node.getparent()
@@ -237,9 +265,8 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
                         except Exception as ex:
                             print("Error:", ex)
                     if output_not_in_siblings(roots_and_elems.root_tag):
-                        current_grabbed_text.append(
-                            etree.tostring(roots_and_elems.root_tag, pretty_print=True, encoding=str))
-                        current_grabbed_text.append("\n")
+                        add_string_to_output(roots_and_elems.root_tag)
+
             except Exception as ex:
                 print("Error:", ex)
 
@@ -252,13 +279,52 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
                     operation_selector(a1)
 
         def PatchOperationFindMod(Operation_Class_PatchOperationFindMod: etree.Element):
+
             New_mods = []
+
+            def search_mod_id_by_name(modName):
+
+                preset_mods_id = (
+                    (('Royalty', 'Rimworld - Royality', "Royalty [Official DLC]"), 'Ludeon.Rimworld.Royalty'),
+                    (('Ideology', 'Rimworld - Ideology', "Ideology [Official DLC]"), 'Ludeon.Rimworld.Ideology'),
+                    (('Biotech', 'Rimworld - Biotech', "Biotech [Official DLC]"), 'Ludeon.Rimworld.Biotech'),
+                    (('Anomaly', 'Rimworld - Anomaly', "Anomaly [Official DLC]"), 'Ludeon.Rimworld.Anomaly'),
+                    (('Vanilla Factions Expanded - Deserters', 'Vanilla Factions Expanded Deserters', 'Deserters'), 'oskarpotocki.vfe.deserters'),
+                    (('Vanilla Factions Expanded - Megacorp', 'Vanilla Factions Expanded Megacorp'), 'oskarpotocki.vfe.megacorp'),
+                    (('Vanilla Factions Expanded - Vikings', 'Vanilla Factions Expanded Vikings'), 'oskarpotocki.vfe.vikings'),
+                    (('Vanilla Factions Expanded - Pirates', 'Vanilla Factions Expanded Pirates'), 'oskarpotocki.vfe.pirates'),
+                    (('Vanilla Factions Expanded - Ancients', 'Vanilla Factions Expanded Ancients'), 'oskarpotocki.vfe.vfea'),
+                    (('Vanilla Factions Expanded - Empire', 'Vanilla Factions Expanded Empire'), 'oskarpotocki.vfe.empire'),
+                    (('Combat Extended', 'CE'), 'ceteam.combatextended'),
+
+                                  )
+
+
+                for m in preset_mods_id:
+                    if modName in m[0]:
+
+                        return m[1]
+
+                modNames = (modName,)
+                results = [data['database'][mod_id] for mod_id in data['database'] if
+                           data['database'][mod_id]["name"] in modNames]
+                if results:
+                    packageId = max(results, key=lambda x: x['gameVersions'])['packageId']
+
+                    return packageId
+                else:
+                    print(modName, end=" ")
+                    print(" -> Not found ID")
+                    return modName
+
             for ch in Operation_Class_PatchOperationFindMod:
                 match ch.tag.lower():
                     case "mods":
                         for li in ch:
-                            New_mods.append(li.text)
-                            current_grabbed_text.append(f"\n<!-- Mod START: {li.text} -->\n")
+                            modId = search_mod_id_by_name(li.text)
+
+                            New_mods.append(modId)
+                            Needed_mods.append(modId)
                             # print(mod_name)
                     case "match":
                         operation_selector(ch)
@@ -270,8 +336,8 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
                     case "casefalse":
                         for a in ch:
                             operation_selector(a)
-
-            current_grabbed_text.append(f"\n<!-- Mods END: {New_mods} -->\n")
+            for mod in New_mods:
+                Needed_mods.remove(mod)
 
         def PatchOperationConditional(Operation_Class_PatchOperationConditional: etree.Element):
             for ch in Operation_Class_PatchOperationConditional:
@@ -285,16 +351,15 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
                 return
             Patch_elem.tag = 'ThingDef'
 
-            current_grabbed_text.append(etree.tostring(Patch_elem, pretty_print=True, encoding=str))
-            current_grabbed_text.append("\n")
+            add_string_to_output(Patch_elem)
 
         def ModSettingsFramework(Patch_elem: etree.Element):
             """
             from patch:
             <Operation Class="ModSettingsFramework.PatchOperationSliderFloat">
-                <label>Tweak Gestalt Level 1 Control Groups</label>
-        		<tooltip>Adjust how many control groups the Gestalt Engine has when level 1. Default: 1</tooltip>
-        		<id>RM_GestaltLevel1Control</id>
+                <label>Tweak Gestalt Level 1 Bandwith</label>
+        		<tooltip>Adjust how much bandwith the Gestalt Engine has when level 1. Default: 6</tooltip>
+        		<id>RM_GestaltLevel1Bandwith</id>
                 ...
         		to
                 <RM_GestaltLevel1Bandwith>Настроить проп. способность Гештальта 1-го уровня</RM_GestaltLevel1Bandwith>
@@ -313,6 +378,7 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
                 if item.tag == 'id':
                     idd = item.text
             if idd:
+
                 if label:
                     if idd not in Keyed_tags_patch_grabber:
 
@@ -323,6 +389,8 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
                     if idd + 'Tooltip' not in Keyed_tags_patch_grabber:
                         current_grabbed_Keyed.append(f"<{idd}Tooltip>{tooltip}</{idd}Tooltip>")
                         Keyed_tags_patch_grabber.append(idd + 'Tooltip')
+
+
 
         Op_class: str = a.get("Class", '')
 
@@ -385,16 +453,15 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
 
     # print('Founded patches:', founded_patches)
 
-    if tags_to_extract is None:
-        with open(os.path.join(appdirs.user_config_dir(roaming=True), r'Text_grabber\Settings\E1_Tags_to_extraction.txt'), encoding="utf8") as tag_file:
-            for line in tag_file:
-                list_of_extract_tags_patch_grabber.append(line.strip("\n "))
-    else:
-        for line in tags_to_extract:
-            list_of_extract_tags_patch_grabber.append(line.strip("\n "))
 
 
-    all_text_dict_list = {}
+
+    all_mod_and_string_dict_list: {str, tuple} = {}
+    """{
+    path1: [((mods1), text), ((mods2), text)...]
+    path2: [((mods3), text), ((mods4), text)...]
+    }"""
+
     all_grabbed_Keyed_list = {}
 
     for file in founded_patches:
@@ -406,92 +473,57 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
             parser = etree.XMLParser(remove_comments=True, remove_blank_text=True, )
             tree = etree.parse(patch, parser)
             root = tree.getroot()
-        current_grabbed_text = []
+        current_grabbed_Mod_and_string_list: [tuple] = []
         current_grabbed_Keyed = []
 
         for operation1 in root:
 
             operation_selector(operation1)
-        if current_grabbed_text:
-            if not all([string.strip('\n ').startswith('<!--') for string in current_grabbed_text]):
-                all_text_dict_list[file] = current_grabbed_text
+        if current_grabbed_Mod_and_string_list:
+            all_mod_and_string_dict_list[file] = current_grabbed_Mod_and_string_list
+
 
         if current_grabbed_Keyed:
-            if not all([string.strip('\n ').startswith('<!--') for string in current_grabbed_Keyed]):
-                all_grabbed_Keyed_list[file] = current_grabbed_Keyed
-    # except Exception as ex:
-    #     logging.warning(ex)
-    #     print(ex)
+            all_grabbed_Keyed_list[file] = current_grabbed_Keyed
 
-    # for f in all_text_dict_list:
-    #     print(f, all_text_dict_list[f])
+
 
     def output_to_files(oneFile=False):
 
-
-        if oneFile:
-            text = []
-            for file_text_dict in all_text_dict_list:
-                text.append(f'<!-- {file_text_dict} -->')
-                for i in all_text_dict_list[file_text_dict]:
-                    text.append(i)
-            output_file_path = os.path.join(output_folder, 'Grabbed_Defs_from_patches.xml')
-
-            if not os.path.exists(output_file_path):
-                os.makedirs(output_folder, exist_ok=True)
-            else:
-                printy(f"File already Exists - replace: .\\{printy_escape(output_folder)}", 'r>')
-
-            printy(f"\t\t\t\t{printy_escape(output_file_path)}", 'p>')
-            with open(fr"{output_file_path}", "w", encoding="utf-8") as new_patch_file:
-                new_patch_file.write("<Defs>\n")
-                for l1 in text:
-                    new_patch_file.write(l1)
-                new_patch_file.write("\n</Defs>")
+        global mods_folders
 
 
-        else:
-            filename_list = []
-            for file_text_dict in all_text_dict_list:
-                file_name = file_text_dict.rpartition('\\')[2].removesuffix('.xml') + "_Defs"
-                if file_name not in filename_list:
-                    filename_list.append(file_name)
+
+
+        for orig_file_path in all_mod_and_string_dict_list:
+            # print('File:', orig_file_path)
+            for req_mods_and_element in all_mod_and_string_dict_list[orig_file_path]:
+                # print("mods:", req_mods_and_element[0])
+                # print("text:", req_mods_and_element[1])
+                # print("--------------------")
+                mf = req_mods_and_element[0] if req_mods_and_element[0] != () else ()
+                # print(f'mod: "{mf}"')
+                if mf not in mods_folders:
+                    # print(mf, "not in", [a for a in mods_folders])
+                    mods_folders[mf] = {orig_file_path: [req_mods_and_element[1]]}
                 else:
-                    counter = 0
-                    file_name_mask = "{}{}"
-                    while file_name_mask.format(file_name, counter) in filename_list:
-                        counter += 1
+                    # print(mf, "IS INTO", [a for a in mods_folders])
+                    # print(mods_folders[mf])
+                    if orig_file_path not in mods_folders[mf]:
+                        mods_folders[mf][orig_file_path] = [req_mods_and_element[1]]
 
-                    file_name = file_name_mask.format(file_name, counter)
-                    filename_list.append(file_name)
-
-
-                patches_f = file_text_dict.partition('\\Patches\\')[2].rpartition('\\')[0]
-                # print('patches_f', patches_f)
-                output_file_path = os.path.join(output_folder, patches_f, file_name + ".xml")
-                if not os.path.exists(output_file_path):
-                    os.makedirs(os.path.join(output_folder, patches_f), exist_ok=True)
-                else:
-                    printy(f"File already Exists - replace: .\\{printy_escape(output_folder)}", 'r>')
-
-                printy(f"\t\t\t\t{printy_escape(output_file_path)}", 'p>')
-                with open(fr"{output_file_path}", "w", encoding="utf-8") as new_patch_file:
-                    new_patch_file.write("<Defs>\n")
-                    new_patch_file.write(f'<!-- {file_text_dict} -->\n')
-
-                    for l1 in all_text_dict_list[file_text_dict]:
-                        new_patch_file.write(l1)
-                    new_patch_file.write("\n</Defs>")
-
-
+                    else:
+                        mods_folders[mf][orig_file_path].append(req_mods_and_element[1])
 
     output_to_files(output_in_one_File)
 
-
-    if all_grabbed_Keyed_list:
-        return all_grabbed_Keyed_list
-    else:
-        return None
+    global mod_pathes_and_req_mods
+    # print('all_grabbed_Keyed_list', all_grabbed_Keyed_list)
+    return mod_pathes_and_req_mods, all_grabbed_Keyed_list
+    # if all_grabbed_Keyed_list:
+    #     return all_grabbed_Keyed_list
+    # else:
+    #     return None
 
 def print_Keyed(grabbed_Keyed_dict_list: dict, output_folder: str):
     # TODO: Output like other Defs
@@ -543,8 +575,13 @@ if __name__ == "__main__":
 
 
     output_folder_Keyed = os.path.join(patches_folder1.rpartition("\\")[0], '_Translation\\Grabbed_Keyed_from_patches')
+    tags_to_extr = []
+    with open(os.path.join(appdirs.user_config_dir(roaming=True), r'Text_grabber\Settings\E1_Tags_to_extraction.txt'),
+              encoding="utf8") as tag_file:
+        for line in tag_file:
+            tags_to_extr.append(line.strip("\n "))
 
-    Keyed = main(patches_folder1, output_folder1)
+    Keyed = main(patches_folder1, output_folder1, tags_to_extr, output_in_one_File=True)
 
     # print_Keyed(Keyed, output_folder_Keyed)
 

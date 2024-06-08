@@ -40,7 +40,8 @@ import Text_grabber_settings
 import image_edit
 from text2 import parent_folders
 
-Version_of_Text_grabber = "1.3.7"
+Version_of_Text_grabber = "1.3.8"
+Last_Rimworld_version = "1.5"
 
 global exitString
 global folder
@@ -234,24 +235,33 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
     # printy(f'[new_ET_elem]Mod folder@ - {FoldersProg.mod}')
 
     def get_searching_folders_by_loadfolder():
-        """Порядок загрузки:
+        """
+        {'path1': reqired_mods,}
+        Порядок загрузки:
         / -> Common -> 1.5
         """
         if not file_exists('loadFolders.xml'):
+            reqired_mods = ()
             printy('\tNo loadFolders.xml', 'y>')
-            pathes = ['']
+
+
+
+            pathes = {'': reqired_mods}
+
             common = False
             if file_exists('Common') and not isfile('Common'):
-                pathes.append('Common')
+                pathes['Common'] = reqired_mods
                 common = True
             versions = [fname for fname in os.listdir(".") if
                         (os.path.isdir(fname) and fname.replace(".", "0").isnumeric())]
             if versions:
                 if S.Delete_old_versions_translation:
-                    pathes.append(max(versions))
+                    pathes[max(versions).strip('/\\')] = reqired_mods
+
                 else:
                     for v in versions:
-                        pathes.append(v)
+                        pathes[v.strip('/\\')] = reqired_mods
+
             printy('\tPathes to search:', 'y>', end='')
             printy(
                 f' Common - {common}, Old versions - {not S.Delete_old_versions_translation}, Version folder - {versions != []}',
@@ -267,32 +277,39 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                 tree1 = ET.parse(lf)
             root1 = tree1.getroot()
             # Папки перевода from loadFolders.xml
-            pathes = []
-            versions = []
-            for rim_version in root1:
-                versions.append(rim_version.tag)
+            pathes: {str: ()} = {}
+            """
+            Loadfolder path
+            Required mods tuple
+            """
+
+            max_v = max([rim_version.tag for rim_version in root1])
+
+
+            def add_pathes_by_ver(ver_p: ET.Element):
+                for li in ver_p:
+                    added_path = li.text.strip('/\\') if li.text is not None else ""
+                    r_mod = li.get('IfModActive')
+                    if r_mod is None:
+                        req_mods = tuple()
+                    else: req_mods = tuple(r_mod.split(', '))
+
+                    if file_exists(added_path) or added_path == '':
+
+                        if added_path not in pathes or req_mods == ():
+                            pathes[added_path] = req_mods
+
 
             if S.Delete_old_versions_translation:
-                v = max(versions)
-                max_ver_el = root1.find(v)
-                if max_ver_el is not None:
-                    for ver_path in max_ver_el:
-                        if ver_path.text not in pathes:
-                            if ver_path.text is not None:
-                                pathes.append(ver_path.text)
-                            else:
-                                pathes.append("")
+                add_pathes_by_ver(root1.find(max_v))
             else:
                 for rim_version in root1:
-                    for ver_path in rim_version:
-                        if ver_path.text not in pathes:
-                            if ver_path.text is not None:
-                                pathes.append(ver_path.text)
-                            else:
-                                pathes.append("")
+                    add_pathes_by_ver(rim_version)
 
-            pathes = list(map(lambda x: x.strip('/\\'), pathes))
-            pathes[:] = [pth for pth in pathes if (os.path.exists(pth) or pth == '')]
+
+
+            # pathes = list(map(lambda x: x.strip('/\\'), pathes))
+            # pathes[:] = [pth for pth in pathes if (os.path.exists(pth) or pth == '')]
             printy('\tPathes to search:', 'y>')
             print('\t\t', pathes)
 
@@ -302,7 +319,11 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
             return pathes
 
     seach_folders = get_searching_folders_by_loadfolder()
-
+    """
+    {'path1': reqired_mods,}
+    Порядок загрузки:
+    / -> Common -> 1.5
+    """
     @dataclass
     class TranslatingFile:
         path: str
@@ -312,19 +333,25 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
         def __repr__(self):
             return f"{self.path}"
 
-    def get_folders(folders):
+    def get_folders(folders: {str, ()}):
+        """
+        {'path1': reqired_mods,}
+        Порядок загрузки:
+        / -> Common -> 1.5
+        """
         Defs = []
-        Patches = []
+        Patches: {str: ()} = {}
         Langs = []
 
-        for f in folders:
-            fds = os.listdir(f if f != '' else '.')
+        for path in folders:
+
+            fds = os.listdir(path if path != '' else '.')
             if 'Defs' in fds:
-                Defs.append(f)
+                Defs.append(path)
             if 'Patches' in fds:
-                Patches.append(f)
+                Patches[path] = folders[path]
             if 'Languages' in fds:
-                Langs.append(f)
+                Langs.append(path)
 
 
         return Defs, Langs, Patches
@@ -370,7 +397,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
     printy('\tSearching Defs, Keyed, Strings, Patches, Languages', 'y>')
 
-    def make_files_path_to_translate(folders_: list[str], folder_name: str, output_foler_name: str):
+    def make_files_path_to_translate(folders_: list[str], folder_name: str, output_foler_name: str, dirname_after_Translation="", no_Lang_folder=False):
         """class TranslatingFile:
         path: str
         name: str
@@ -391,7 +418,9 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                         if folder_name in ("Keyed", "Strings"):
                             np = os.path.join('_Translation', dir_name.partition('Languages\\')[0], 'Languages', S.Game_language, output_foler_name)
                         else:
-                            np = os.path.join('_Translation', dir_name, 'Languages', S.Game_language, output_foler_name)
+                            np = os.path.join('_Translation', dirname_after_Translation, dir_name, 'Languages', S.Game_language, output_foler_name)
+                        if no_Lang_folder:
+                            np = os.path.join('_Translation', dirname_after_Translation, dir_name, output_foler_name)
 
                         a = TranslatingFile(
                             os.path.normpath(os.path.join(path, file)),
@@ -410,7 +439,26 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
         translatingFiles_patch_Defs = []
         Defs_from_patches_folder = '_Translation\\Grabbed_Defs_from_patches'
 
+        if S.Path_to_Mod_folder:
+            printy('\t\t\t\t[r>]Try get Mod Database into Steam mods folder:@', end="")
+            database_path = os.path.normpath(os.path.join(S.Path_to_Mod_folder, r'1847679158/db/db.json'))
+            printy(f'[<r] -> {escape_printy_string(database_path)}@')
+
+        else:
+            database_path = 'None_path_lalala'
+
+        if not os.path.exists(database_path):
+            printy('\t\t\t\t[r>]No Mod Database - get file into Textgrabber@')
+            database_path = os.path.join(FoldersProg.prog, r'db.json')
+        else:
+            printy('\t\t\t\t[r]Mod Database Founded@')
+
+
+        patches_file_count = 0
         for pf in patches_folders:
+
+
+
             # printy(f'\t\t\tPath: {escape_printy_string(pf)}\\Patches', 'p>')
             pff = os.path.join(pf, 'Patches')
             pff_output = os.path.join(Defs_from_patches_folder, pf)
@@ -420,32 +468,96 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
 
             shutil.rmtree(os.path.join(pff_output), ignore_errors=True)
-            patch_current_keyed = Patch_grabber.main(pff, pff_output, tags_to_extract=S.Tags_to_extraction, output_in_one_File=False)
+            patch_current_keyed = Patch_grabber.main(pff, pff_output, tags_to_extract=S.Tags_to_extraction, output_in_one_File=True, required_mods=patches_folders[pf], database_path=database_path)
+
             if patch_current_keyed:
-                print('patch_current_keyed')
-                print(patch_current_keyed)
-                #   TODO:
-            if file_exists(os.path.join(pff_output, '__Defs_from_patches')):
-                loadfolder_folders_to_add.append(os.path.join(pff_output, '__Defs_from_patches'))
+                for file_dict in patch_current_keyed:
+                    path = os.path.normpath(os.path.join('_Translation\\From_patches\\No mods required\\Languages\\', S.Game_language, "Keyed"))
+                    os.makedirs(path, exist_ok=True)
 
-                deff = make_files_path_to_translate([os.path.join(pff_output, '__Defs_from_patches')], "", "DefInjected")
-                for ff in deff:
-                    print(ff.path, ff.name, ff.new_path)
-                delete_folders.append(os.path.join(pff_output, '__Defs_from_patches'))
-                translatingFiles_patch_Defs.extend(deff)
 
-    else:
-        translatingFiles_patch_Defs = []
-        translatingFiles_Patches = []
+                    if file_dict:
+                        for file in file_dict:
+                            # print(patch_current_keyed)
+                            # print(file_dict)
+                            # print(file)
 
-        # printy(f'\t\tPatches in: {escape_printy_string(patches_folders)}', 'o')
-        # printy('\t\tFiles in Patches:', 'o')
-        # translatingFiles_Patches = make_files_path_to_translate(patches_folders, "Patches", "Patches")
+                            li_elem = f'<li>From_patches\\No mods required</li>\n\t\t'
+                            if li_elem not in loadfolder_folders_to_add:
+                                loadfolder_folders_to_add.append(li_elem)
+
+
+                            new_name = file.rpartition("\\")[2].removesuffix(".xml") + str(patches_file_count) + ".xml"
+                            patches_file_count += 1
+                            new_path = os.path.join(path, new_name)
+                            with open(new_path, "w", encoding="utf-8") as new_patch_file:
+                                patches_file_count += 1
+                                new_patch_file.write("<LanguageData>\n")
+                                for line in file_dict[file]:
+                                    new_patch_file.write("\t" + line + "\n")
+                                new_patch_file.write(r"</LanguageData>")
+
+
+
+        mod_folder_dict = Patch_grabber.mods_folders
+        # print(mod_folder_dict)
+        if mod_folder_dict:
+            for mf in mod_folder_dict:
+                mod_folder_name = re.sub('[^0-9a-zA-Z]+', '_', mf[0]) if mf else ""
+                # pprint.pprint((mf, mod_folder_dict[mf]), depth=2, width=400)
+                new_grabbed_folder_path = os.path.join(Defs_from_patches_folder, mod_folder_name)
+                # print(new_grabbed_folder_path)
+                os.makedirs(new_grabbed_folder_path, exist_ok=True)
+
+                for filepath in mod_folder_dict[mf]:
+
+                    text_list = mod_folder_dict[mf][filepath]
+                    new_file_name = filepath.removesuffix(".xml").rpartition('\\')[2]
+                    new_file_path = f"{new_grabbed_folder_path}\\{new_file_name}{patches_file_count}.xml"
+                    with open(new_file_path, "w", encoding="utf-8") as new_patch_file:
+                        patches_file_count += 1
+                        new_patch_file.write("<Defs>\n")
+
+                        if mf:
+                            new_patch_file.write(f'<!-- {list(mf)} -->\n')
+
+                        for l1 in text_list:
+                            new_patch_file.write(l1)
+                        new_patch_file.write("\n</Defs>")
+
+                        # printy(f'\t\t\t{escape_printy_string(new_file_path)}')
+                        new_mf_name = mod_folder_name if mod_folder_name else "No mods required"
+
+                        np = os.path.join('_Translation', 'From_patches', new_mf_name, 'Languages', S.Game_language, "DefInjected")
+
+                        a = TranslatingFile(
+                            os.path.normpath(new_file_path),
+                            new_file_name + str(patches_file_count) + ".xml",
+                            np
+                        )
+                        translatingFiles_patch_Defs.append(a)
+
+                        loadfolder_path = os.path.join('From_patches', new_mf_name)
+
+                        if mf:
+                            li_elem = f'<li IfModActive="{mf[0]}">{loadfolder_path}</li>\n\t\t'
+                        else:
+                            li_elem = f'<li>{loadfolder_path}</li>\n\t\t'
+
+
+                        if li_elem not in loadfolder_folders_to_add:
+                            # print(li_elem, "not in", loadfolder_folders_to_add)
+                            loadfolder_folders_to_add.append(li_elem)
+
+        printy(f'\t\tPatches in: {escape_printy_string(patches_folders)}', 'o')
+        printy('\t\tFiles in Patches:', 'o')
+        translatingFiles_Patches = make_files_path_to_translate(list(patches_folders), "Patches", "", dirname_after_Translation="Copied_patches", no_Lang_folder=True)
         # """ path: str
         #     name: str
         #     new_path: str"""
-    # else:
-    #     translatingFiles_Patches = []
+    else:
+        translatingFiles_patch_Defs = []
+        translatingFiles_Patches = []
 
     if def_folders:
         printy(f'\t\tDefs in: {escape_printy_string(def_folders)}', 'o')
@@ -612,11 +724,11 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
         # print(Loadfolder_module.path_to_Patch)
         # for path_of_patch_folder in Loadfolder_module.path_to_Patch:
         for path_of_patch_folder in patches_folders:
+
             for path, subdirs, files in os.walk(
                     "Patches" if path_of_patch_folder == "" else path_of_patch_folder + "\\Patches"):
                 for name in files:
                     if name.endswith(".xml"):
-                        # TODO: коммент попытка в патчи
                         patch_fullpath.append(os.path.join(path, name))
         full_path_to_label_patch = []
         if patch_fullpath:
@@ -634,7 +746,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                         else:
                             full_path_to_label_patch.append(patch_path)
                             patch_new_fullpath.append("_Translation\\" + str(
-                                patch_path.replace("\\Patches\\", "\\_Patches_to_translate\\").rpartition("\\")[0]))
+                                patch_path.replace("Patches\\", "_Patches_to_translate\\").rpartition("\\")[0]))
             except ET.ParseError:
                 Error_log.append("Ошибка чтения " + patch_path + "\n\n")
 
@@ -1565,7 +1677,6 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                             f'{" " * 15}[y<]{escape_printy_string(f1): <20}\\{escape_printy_string(file_full_path)}@ --> [r]The path is too long@ -> Reducing filemane + counter')
                         file_name1 = file_name.rpartition(".")[2].rpartition("_")[2] + str(fl_idx) + "_" + str(
                             folder_idx)
-
                 file_path_plus_name = file_path1 + "\\" + file_name1 + ".xml"
                 # print("New name/path:" + file_path_plus_name.partition('_Translation/')[2])
 
@@ -1684,20 +1795,24 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
 
     printy("Processing Keyed", 'n')
-    for keyed_files in translatingFiles_Keyed:
-        os.makedirs(keyed_files.new_path, exist_ok=True)
-        shcopy(keyed_files.path, os.path.join(keyed_files.new_path, keyed_files.name))
+    for f in translatingFiles_Keyed:
+        os.makedirs(f.new_path, exist_ok=True)
+        shcopy(f.path, os.path.join(f.new_path, f.name))
     printy("Processing Keyed... Done", 'n')
     print()
 
     printy("Processing Strings", 'n')
-    for string_files in translatingFiles_Strings:
-        os.makedirs(string_files.new_path, exist_ok=True)
-        shcopy(string_files.path, os.path.join(string_files.new_path, string_files.name))
+    for f in translatingFiles_Strings:
+        os.makedirs(f.new_path, exist_ok=True)
+        shcopy(f.path, os.path.join(f.new_path, f.name))
     printy("Processing Strings... Done", 'n')
     print()
 
-
+    printy("Processing copy patches with text", 'n')
+    import Patch_copy_module
+    Patch_copy_module.find_patches_with_text(translatingFiles_Patches, Tags_to_extraction=S.Tags_to_extraction)
+    printy("Processing copy patches with text... Done", 'n')
+    print()
 
     root2 = '_Translation'
 
@@ -1743,9 +1858,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
         """
         Проверка loadFolders на наличие папок
         """
-        if file_exists('loadFolders.xml'):
-
-
+        def exist():
             printy("Loadfolder.xml remove empty folders...", 'n')
 
             with open('loadFolders.xml', 'r', encoding="utf-8") as xml_file:
@@ -1754,18 +1867,18 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
             max_v = "1.0"
 
             if loadfolder_folders_to_add:
-                print("Add patches_defs_folders into Loadfolder")
+                printy("\t[o>]Add patches_defs_folders into Loadfolder@")
+
+                for lf in loadfolder_folders_to_add:
+                    printy("\t\t" + escape_printy_string(lf), "o")
                 for vv in root1:
-                    tail = vv[-1].tail
                     vv[-1].tail = '\n\t\t'
                     for lii in loadfolder_folders_to_add:
-                        lii1 = ET.SubElement(vv, 'li')
-                        lii1.text = lii
-                        lii1.tail = '\n\t\t'
+                        el = ET.fromstring(lii)
+                        el.tail = '\n\t\t'
+                        vv.append(el)
                     else:
-                        lii1.tail = tail
-
-
+                        vv[-1].tail = "\n\t"
 
             for v in root1:
                 try:
@@ -1820,7 +1933,59 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
             check_necessity_loadfolder()
 
-    # loadfolder_check_folders()
+        if file_exists('LoadFolders.xml'):
+            exist()
+
+
+
+        else:
+            if loadfolder_folders_to_add:
+                printy("Loadfolder.xml creating for patches...", 'n')
+                printy("\t[o>]Add patches_defs_folders into Loadfolder@")
+
+                for lf in loadfolder_folders_to_add:
+                    printy("\t\t" + escape_printy_string(lf), "o")
+
+                loadFolders = ET.Element('loadFolders')
+                loadFolders.text = "\n\t"
+                vers = ET.SubElement(loadFolders, f'v{Last_Rimworld_version}')
+                vers.text = '\n\t\t'
+                vers.tail = "\n"
+
+
+                # print('Seach folders:', seach_folders)
+                for s_f in seach_folders:
+                    if s_f == '/' or file_exists(os.path.join("_Translation", s_f)):
+                        if not s_f:
+                            li = ET.SubElement(vers, "li")
+                            li.text = "/"
+                            li.tail = "\n\t\t"
+                        else:
+                            li = ET.SubElement(vers, "li")
+                            li.text = str(s_f)
+                            li.tail = "\n\t\t"
+                for s_f in loadfolder_folders_to_add:
+                    li = ET.fromstring(s_f)
+                    li.tail = "\n\t\t"
+                    vers.append(li)
+                vers[-1].tail = "\n\t"
+
+                with open(f"_Translation\\LoadFolders.xml", "wb") as fff:
+                    fff.write(ET.tostring(loadFolders, encoding="utf-8"))
+                printy("Loadfolder.xml creating for patches...Done", 'n')
+
+
+
+
+                # print("Add patches_defs_folders into Loadfolder")
+                # for vv in root1:
+                #     for lii in loadfolder_folders_to_add:
+                #         el = ET.fromstring(lii)
+                #         el.tail = '\n\t\t'
+                #         vv.append(el)
+                #     else:
+                #         vv[-1].tail = "\n\t"
+
 
     if S.Merge_folders:
         printy("Merge folders", 'n')
@@ -2015,12 +2180,19 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
         Error_log.append(f"Error delete_empty_folders {ex} \n\n")
         printy(fr"[r]\[ERROR\]@ delete_empty_folders {escape_printy_string(str(ex))} \n\n", predefined='<m')
 
+
+
+
+    delete_folders.append(os.path.join("_Translation", "Grabbed_Defs_from_patches"))
     try:
         if delete_folders:
             for ff in delete_folders:
                 shutil.rmtree(ff, ignore_errors=True)
     except Exception as ex:
         Error_log.append(f"Error Delete {delete_folders} {ex} \n\n")
+
+
+
 
     try:
 
@@ -2375,7 +2547,9 @@ if __name__ == '__main__':
     # Window_Text_grabber.after(1000, lambda: update_settings())
     Window_Text_grabber.mainloop()
 
+
 '''
 pyinstaller --noconfirm Text_Grabber.spec
+pyinstaller Text_Grabber.spec
 
 '''

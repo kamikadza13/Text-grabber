@@ -1,5 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+
 a = Analysis(
     ['Text_Grabber.py'],
     pathex=[],
@@ -10,7 +11,8 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
-    noarchive=False,
+    noarchive=True,
+    optimize=0,
 )
 pyz = PYZ(a.pure)
 
