@@ -1,11 +1,27 @@
 Update log
 
-	TODO: rewrite parent adding
-	TODO: add adding strings into settings
+	TODO: add adding strings into settings. What is it?
+	TODO: fix same patches (in different folders) grabbing
+
+
+
+Update 1.4.0
+	Improved patch grabbing - Removed more unnecessary lines
+	Add <?xml version="1.0" encoding="UTF-8"?> to keyed - Done
+	Add filename duplacates check - Done
+	fix Auto Updating (Add ask question) - Done
+	STRINGS DIDn't grab! - Done?
+
+
+
+Update 1.3.9
+	Hotfixes - XmlExtensions.SettingsMenuDef, Some PawnKindDef
+
 
 Update 1.3.8
 	ADDED PATCH GRABBING! ^_^
 	Rewrited defs, patches, keyed, strings grab methods...
+	Fixed stupid error due to  "--" into text -> The comments break down.
 
 	
 Update 1.3.7

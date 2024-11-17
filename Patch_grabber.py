@@ -2,11 +2,8 @@ import copy
 import json
 import os
 import re
-import shutil
 from dataclasses import dataclass
-from tkinter.filedialog import askdirectory
 
-import appdirs
 import lxml.etree as etree
 from printy import printy, escape as printy_escape
 
@@ -393,6 +390,14 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
 
 
         Op_class: str = a.get("Class", '')
+        Op_mayrequire: str = a.get("MayRequire")
+        New_mods2 = []
+        if Op_mayrequire is not None:
+            mod_ids = Op_mayrequire.split(',')
+            for mod_id in mod_ids:
+                m_id = mod_id.strip()
+                New_mods2.append(m_id)
+                Needed_mods.append(m_id)
 
         match Op_class:
 
@@ -430,7 +435,8 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
                 for child in a:
                     operation_selector(child)
 
-
+        for mod in New_mods2:
+            Needed_mods.remove(mod)
 
 
     printy(f"\t\t\t\\{printy_escape(patches_folder)}", 'p>', end='')
@@ -526,7 +532,6 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
     #     return None
 
 def print_Keyed(grabbed_Keyed_dict_list: dict, output_folder: str):
-    # TODO: Output like other Defs
     if grabbed_Keyed_dict_list:
         filename_list = []
         for gr_Keyed_dict in grabbed_Keyed_dict_list:
@@ -556,34 +561,5 @@ def print_Keyed(grabbed_Keyed_dict_list: dict, output_folder: str):
                     new_patch_file.write(l1)
 
                 new_patch_file.write('</LanguageData>')
-
-
-if __name__ == "__main__":
-    Defs_from_patches_folder = '_Translation\\Grabbed_Defs_from_patches'
-    patches_folder1 = os.path.normpath(askdirectory())
-    if os.path.exists(os.path.join(patches_folder1, 'Patches')):
-        patches_folder1 = os.path.join(patches_folder1, 'Patches')
-    # printy(f"Input:  {printy_escape(patches_folder1)}", 'p>')
-
-    # patches_folder = os.path.abspath(r"D:\Games\steamapps\workshop\content\294100\3070780021\Alpha Prefabs rus\1.4\Mods\Ideology\_Patches_to_translate")
-    output_folder1 = os.path.join(patches_folder1.rpartition("\\")[0], Defs_from_patches_folder)
-    # printy(f"Output: {printy_escape(output_folder1)}", 'p>')
-
-
-
-    shutil.rmtree(output_folder1, ignore_errors=True)
-
-
-    output_folder_Keyed = os.path.join(patches_folder1.rpartition("\\")[0], '_Translation\\Grabbed_Keyed_from_patches')
-    tags_to_extr = []
-    with open(os.path.join(appdirs.user_config_dir(roaming=True), r'Text_grabber\Settings\E1_Tags_to_extraction.txt'),
-              encoding="utf8") as tag_file:
-        for line in tag_file:
-            tags_to_extr.append(line.strip("\n "))
-
-    Keyed = main(patches_folder1, output_folder1, tags_to_extr, output_in_one_File=True)
-
-    # print_Keyed(Keyed, output_folder_Keyed)
-
 
 

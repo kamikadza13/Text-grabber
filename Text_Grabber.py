@@ -4,8 +4,7 @@ import ctypes
 import glob
 import html
 import os
-import re
-import shutil
+import pathlib
 import threading
 import xml.etree.ElementTree as ET
 from ctypes import windll
@@ -21,7 +20,6 @@ from shutil import rmtree
 from tkinter import Button
 from tkinter import filedialog
 
-import icecream
 import lxml.etree as etree
 import pyperclip
 import ttkbootstrap
@@ -33,14 +31,13 @@ from result import Ok, Err, is_ok, is_err
 from ttkbootstrap.dialogs import Messagebox
 
 import Check_New_Version
-# from print_color import print
+import Finalizing
 import Patch_grabber
-# import Loadfolder_module
 import Text_grabber_settings
 import image_edit
 from text2 import parent_folders
 
-Version_of_Text_grabber = "1.3.8"
+Version_of_Text_grabber = "1.4.0"
 Last_Rimworld_version = "1.5"
 
 global exitString
@@ -48,10 +45,6 @@ global folder
 global exitString1
 global list_of_forbidden_character_in_label1
 
-icecream.install()
-
-
-# ic.disable()
 
 class CheckboxGloabal:
     def get(self):
@@ -102,9 +95,10 @@ Parent_Name_list_that_has_parent = []
 Parent_elem_patch_grabber = []
 Error_log = []
 
-
+@dataclass
 class FoldersProg:
-    prog = os.path.realpath(__file__).partition("_internal")[0].rpartition("\\")[0]
+    # prog = os.path.realpath(__file__).partition("_internal")[0].rpartition("\\")[0]
+    prog = pathlib.Path.cwd()
     mod = ''
 
 
@@ -184,18 +178,8 @@ def adding_elems(root1: ET.Element, elem: ET.Element, first_time_called=True):
 
 ruleFiles_list = {}
 
-"""
-Если файл в моде существует в 2х экземплярах, то берется в таком порядке:
-папка версий, потом Common потом '/' 
-Но в проге обратный порядок т.к. файлы будут заменять друг-друга...
-хм... а вообще не будут, и будет создаваться копии, но в разных папках
-ну и пофиг.
 
-Может быть стоит запилить проверку чтобы не было одинаковых файлов... в папке версий, потом Common потом '/' 
-"""
-
-
-def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floodgauge):
+def main(Inputed_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floodgauge):
     def is_version(string: str):
         return string.replace(".", "0").isdecimal()
         #
@@ -204,33 +188,33 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
         # else:
         #     return False
 
-    def change_to_mod_dir(Entered_path_to_mod_2):
+    def change_to_mod_dir(Inputed_path_to_mod_2):
 
-        if Entered_path_to_mod_2 == "":
+        if Inputed_path_to_mod_2 == "":
             folder_selected = os.path.normpath(filedialog.askdirectory(title="Select MOD folder"))
             if folder_selected == ".":
                 exit_prog()
 
             if not folder_selected:
                 exit_prog()
-            Entered_path_to_mod_2 = folder_selected
+            Inputed_path_to_mod_2 = folder_selected
 
-        print(f'Work directory: "{Entered_path_to_mod_2}"')
 
-        FoldersProg.mod = Entered_path_to_mod_2
+        FoldersProg.mod = Inputed_path_to_mod_2
+        printy(f'\tWork directory: "{FoldersProg.mod}"', 'n')
+
         os.chdir(FoldersProg.mod)
 
-    change_to_mod_dir(Entered_path_to_mod)
+    change_to_mod_dir(Inputed_path_to_mod)
 
     Window_Text_grabber.Enter_textbox.delete(0, 'end')
     Window_Text_grabber.Enter_textbox.insert(0, FoldersProg.mod)
 
-    shutil.rmtree('_Translation', ignore_errors=True)
-    shutil.rmtree('__Defs_from_patches', ignore_errors=True)
-    shutil.rmtree('__Keyed_from_patches', ignore_errors=True)
+    rmtree('_Translation', ignore_errors=True)
+    rmtree('__Defs_from_patches', ignore_errors=True)
+    rmtree('__Keyed_from_patches', ignore_errors=True)
 
     printy('Loadfolder_module', 'n')
-    # Loadfolder_module.Language = S.Game_language
 
     # printy(f'[new_ET_elem]Mod folder@ - {FoldersProg.mod}')
 
@@ -266,7 +250,8 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
             printy(
                 f' Common - {common}, Old versions - {not S.Delete_old_versions_translation}, Version folder - {versions != []}',
                 '<y')
-            print('\t\t', pathes)
+            if pathes != {'': ()}:
+                print('\t\t', pathes)
             return pathes
         else:
             printy('\tloadFolders.xml found', 'y>')
@@ -397,7 +382,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
     printy('\tSearching Defs, Keyed, Strings, Patches, Languages', 'y>')
 
-    def make_files_path_to_translate(folders_: list[str], folder_name: str, output_foler_name: str, dirname_after_Translation="", no_Lang_folder=False):
+    def make_files_path_to_translate(folders_: list[str], folder_name: str):
         """class TranslatingFile:
         path: str
         name: str
@@ -413,14 +398,24 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                     printed_ = True
                     printy(f'\t\t\t{escape_printy_string(dir_name)}\\{escape_printy_string(folder_name)}:', '<y')
                 for file in files:
-                    if file.endswith('.xml'):
+
+
+                    if file.endswith('.xml') or (folder_name == 'Strings' and file.endswith('.txt')):
                         printy(f'\t\t\t\t{escape_printy_string(os.path.join(path, file))}')
-                        if folder_name in ("Keyed", "Strings"):
-                            np = os.path.join('_Translation', dir_name.partition('Languages\\')[0], 'Languages', S.Game_language, output_foler_name)
-                        else:
-                            np = os.path.join('_Translation', dirname_after_Translation, dir_name, 'Languages', S.Game_language, output_foler_name)
-                        if no_Lang_folder:
-                            np = os.path.join('_Translation', dirname_after_Translation, dir_name, output_foler_name)
+                        match folder_name:
+                            case "Keyed":
+                                np = os.path.join('_Translation', dir_name.partition('Languages\\')[0], 'Languages', S.Game_language, 'Keyed')
+                            case "Strings":
+                                lang_replace = sub(r"(.*Languages\\).+?(\\.*)", r'\1' + S.Game_language + r'\2', path)
+                                np = os.path.join('_Translation', lang_replace)
+                            case "Patches":
+                                np = os.path.join('_Translation', "Copied_patches", dir_name)
+                            case "Defs":
+                                np = os.path.join('_Translation', dir_name, 'Languages', S.Game_language, 'DefInjected')
+                            case _:
+                                np = os.path.join('_Translation', "", dir_name, 'Languages', S.Game_language, 'SomeThingGoesWrong?')
+
+
 
                         a = TranslatingFile(
                             os.path.normpath(os.path.join(path, file)),
@@ -456,18 +451,12 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
         patches_file_count = 0
         for pf in patches_folders:
-
-
-
             # printy(f'\t\t\tPath: {escape_printy_string(pf)}\\Patches', 'p>')
             pff = os.path.join(pf, 'Patches')
             pff_output = os.path.join(Defs_from_patches_folder, pf)
 
 
-            #   TODO: Извлечение Деф готово, нужно доделать извлечение текста из них
-
-
-            shutil.rmtree(os.path.join(pff_output), ignore_errors=True)
+            rmtree(os.path.join(pff_output), ignore_errors=True)
             patch_current_keyed = Patch_grabber.main(pff, pff_output, tags_to_extract=S.Tags_to_extraction, output_in_one_File=True, required_mods=patches_folders[pf], database_path=database_path)
 
             if patch_current_keyed:
@@ -478,10 +467,6 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
                     if file_dict:
                         for file in file_dict:
-                            # print(patch_current_keyed)
-                            # print(file_dict)
-                            # print(file)
-
                             li_elem = f'<li>From_patches\\No mods required</li>\n\t\t'
                             if li_elem not in loadfolder_folders_to_add:
                                 loadfolder_folders_to_add.append(li_elem)
@@ -503,7 +488,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
         # print(mod_folder_dict)
         if mod_folder_dict:
             for mf in mod_folder_dict:
-                mod_folder_name = re.sub('[^0-9a-zA-Z]+', '_', mf[0]) if mf else ""
+                mod_folder_name = sub('[^0-9a-zA-Z]+', '_', mf[0]) if mf else ""
                 # pprint.pprint((mf, mod_folder_dict[mf]), depth=2, width=400)
                 new_grabbed_folder_path = os.path.join(Defs_from_patches_folder, mod_folder_name)
                 # print(new_grabbed_folder_path)
@@ -551,7 +536,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
         printy(f'\t\tPatches in: {escape_printy_string(patches_folders)}', 'o')
         printy('\t\tFiles in Patches:', 'o')
-        translatingFiles_Patches = make_files_path_to_translate(list(patches_folders), "Patches", "", dirname_after_Translation="Copied_patches", no_Lang_folder=True)
+        translatingFiles_Patches = make_files_path_to_translate(list(patches_folders), "Patches")
         # """ path: str
         #     name: str
         #     new_path: str"""
@@ -562,7 +547,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
     if def_folders:
         printy(f'\t\tDefs in: {escape_printy_string(def_folders)}', 'o')
         printy('\t\tFiles in Defs:', 'o')
-        translatingFiles_Defs = make_files_path_to_translate(def_folders, "Defs", "DefInjected")
+        translatingFiles_Defs = make_files_path_to_translate(def_folders, "Defs")
         """ path: str
             name: str
             new_path: str"""
@@ -574,7 +559,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
     if keyed_folders:
         printy(f'\t\tKeyed in: {escape_printy_string(keyed_folders)}', 'o')
         printy('\t\tFiles in Keyed:', 'o')
-        translatingFiles_Keyed = make_files_path_to_translate(keyed_folders, "Keyed", "Keyed")
+        translatingFiles_Keyed = make_files_path_to_translate(keyed_folders, "Keyed")
         """ path: str
             name: str
             new_path: str"""
@@ -584,10 +569,15 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
     if strings_folders:
         printy(f'\t\tStrings in: {escape_printy_string(strings_folders)}', 'o')
         printy('\t\tFiles in Strings:', 'o')
-        translatingFiles_Strings = make_files_path_to_translate(strings_folders, "Strings", "Strings")
+
+        translatingFiles_Strings = make_files_path_to_translate(strings_folders, "Strings")
         """ path: str
             name: str
             new_path: str"""
+
+
+
+
     else:
         translatingFiles_Strings = []
 
@@ -601,12 +591,6 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
     if translatingFiles_patch_Defs:
         translatingFiles_Defs.extend(translatingFiles_patch_Defs)
 
-
-
-    #   TODO: rewrite all Loadfolder and parent adding
-    # files_to_translate = Loadfolder_module.files_to_translate_path
-    # files_to_translate_name = Loadfolder_module.files_to_translate_name
-    # files_to_translate_path = Loadfolder_module.files_to_translate_new_path
 
     def Go_search_Name_class(list_of_files: list):
         def parent_append(root11: ET.Element):
@@ -715,68 +699,6 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
     # Patch_grabber.set_parents_list(Parent_Name_list, Parent_elem)
     Floodgauge['value'] = 30
-
-    def copy_patches():
-        printy("Copy patches", 'n')
-        patch_fullpath = []
-        patch_new_fullpath = []
-        # ic(Loadfolder_module.path_to_Patch)
-        # print(Loadfolder_module.path_to_Patch)
-        # for path_of_patch_folder in Loadfolder_module.path_to_Patch:
-        for path_of_patch_folder in patches_folders:
-
-            for path, subdirs, files in os.walk(
-                    "Patches" if path_of_patch_folder == "" else path_of_patch_folder + "\\Patches"):
-                for name in files:
-                    if name.endswith(".xml"):
-                        patch_fullpath.append(os.path.join(path, name))
-        full_path_to_label_patch = []
-        if patch_fullpath:
-            print('\t', end='')
-            print('\t'.join(patch_fullpath))
-        for inx, patch_path in enumerate(patch_fullpath):
-            try:
-                with open(patch_path, 'r', encoding="utf-8") as xml_file:
-                    tree = ET.parse(xml_file)
-                root = tree.getroot()
-                for label in S.Tags_to_extraction:
-                    for _ in root.iter(label):
-                        if any(patch_path == c for c in full_path_to_label_patch):
-                            pass
-                        else:
-                            full_path_to_label_patch.append(patch_path)
-                            patch_new_fullpath.append("_Translation\\" + str(
-                                patch_path.replace("Patches\\", "_Patches_to_translate\\").rpartition("\\")[0]))
-            except ET.ParseError:
-                Error_log.append("Ошибка чтения " + patch_path + "\n\n")
-
-        for idx, patch in enumerate(full_path_to_label_patch):
-            with open(patch, 'r', encoding="utf-8") as xml_file:
-                tree = ET.parse(xml_file)
-            root = tree.getroot()
-            operations = root.findall("Operation")
-            operations_to_delete = []
-            for operation in operations:
-                bool_delete = True
-                for label in S.Tags_to_extraction:
-                    b = list(operation.iter(label))
-                    if b:
-                        bool_delete = False
-                        break
-                if bool_delete:
-                    operations_to_delete.append(operation)
-            operations_to_delete = set(operations_to_delete)
-
-            for o_t_d in operations_to_delete:
-                root.remove(o_t_d)
-            dst_path = patch_new_fullpath[idx]
-            os.makedirs(dst_path, exist_ok=True)
-            with open(dst_path + "\\" + str(patch.rpartition("\\")[2]), 'wb') as xml_file:
-                tree.write(xml_file, encoding="utf-8")
-        printy("Copy patches... Done", 'n')
-        print()
-
-    # copy_patches()
 
     def update_Parent_Name_elems(Parent_Name1, Parent_Name_that_has_parent1, Parent_elem1):
         printy('Update_Parent_Name_elems', 'n')
@@ -889,7 +811,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
             def pawnKind_add_strings(elem: ET.Element):
                 add_elem = []
-                a = [elem]
+                a: list[ET.Element] = []
                 b = elem.find('lifeStages')
                 orig_label_text = ''
 
@@ -999,13 +921,14 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
             #                     li.set('Class', "Li_Class_Replaced_by_compClass")
 
             def translate_ThingDef_tools(el1: ET.Element):
+                """tools.0"""
                 if S.Game_language == "Russian":
                     tools = el1.find("tools")
                     if tools is not None:
                         for li in tools:
                             for t in li:
                                 if t.tag == 'label':
-                                    match t.text:
+                                    match t.text.lower():
                                         case "stock":
                                             t.text = "ложe"
                                         case "barrel":
@@ -1017,6 +940,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                                         case "body":
                                             t.text = "корпус"
                                         case "shaft":
+                                            t.text = "древко"
                                             t.text = "древко"
                                         case "point":
                                             t.text = "острие"
@@ -1084,6 +1008,128 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                                             t.text = "левый силовой коготь"
                                         case 'right power claw':
                                             t.text = "правый силовой коготь"
+                                        case 'mandibles':
+                                            t.text = "нижняя челюсть"
+                                        case 'tusk':
+                                            t.text = "бивень"
+                                        case 'neck':
+                                            t.text = "горловина"
+                                        case 'bayonet':
+                                            t.text = "штык"
+                                        case 'fangs':
+                                            t.text = "клыки"
+                                        case 'left claws':
+                                            t.text = "левые когти"
+                                        case 'right claws':
+                                            t.text = "правые когти"
+                                        case 'chain':
+                                            t.text = "цепь"
+                                        case 'venom fangs':
+                                            t.text = "ядовитые клыки"
+                                        case 'head claw':
+                                            t.text = "головной коготь"
+                                        case 'left wing':
+                                            t.text = "левое крыло"
+                                        case 'right wing':
+                                            t.text = "правое крыло"
+                                        case 'manipulator':
+                                            t.text = "манипулятор"
+                                        case 'bodyslam':
+                                            t.text = "удар корпусом"
+                                        case 'left hand':
+                                            t.text = "левая рука"
+                                        case 'right hand':
+                                            t.text = "правая рука"
+                                        case 'spike':
+                                            t.text = "шип"
+                                        case 'axe':
+                                            t.text = "топор"
+                                        case 'hammer':
+                                            t.text = "молот"
+                                        case 'left branch':
+                                            t.text = "левая ветвь"
+                                        case 'right branch':
+                                            t.text = "правая ветвь"
+                                        case 'left fin':
+                                            t.text = "левый плавник"
+                                        case 'right fin':
+                                            t.text = "правый плавник"
+                                        case 'tentacle':
+                                            t.text = "щупальце"
+                                        case 'left spike':
+                                            t.text = "левый шип"
+                                        case 'right spike':
+                                            t.text = "правый шип"
+                                        case 'top spike':
+                                            t.text = "верхний шип"
+                                        case 'barrels':
+                                            t.text = "стволы"
+                                        case 'pickaxe':
+                                            t.text = "кирка"
+                                        case 'chainsaw':
+                                            t.text = "бензопила"
+                                        case 'spine':
+                                            t.text = "позвоночник"
+                                        case 'tail':
+                                            t.text = "хвост"
+                                        case 'front left leg':
+                                            t.text = "передняя левая нога"
+                                        case 'front right leg':
+                                            t.text = "передняя правая нога"
+                                        case 'hooves':
+                                            t.text = "копыта"
+                                        case 'left mace':
+                                            t.text = "левая булава"
+                                        case 'right mace':
+                                            t.text = "правая булава"
+                                        case 'bionic fist':
+                                            t.text = "бионический кулак"
+                                        case 'venomous talons':
+                                            t.text = "ядовитые когти"
+                                        case 'tail spikes':
+                                            t.text = "хвостовые шипы"
+                                        case 'arm blade':
+                                            t.text = "ручной клинок"
+                                        case 'tentacles':
+                                            t.text = "щупальца"
+                                        case 'wings':
+                                            t.text = "крылья"
+                                        case 'maw':
+                                            t.text = "пасть"
+                                        case 'needles':
+                                            t.text = "иглы"
+                                        case 'left hammer fist':
+                                            t.text = "левый кулак молот"
+                                        case 'right hammer fist':
+                                            t.text = "правый кулак молот"
+                                        case 'scyther blade':
+                                            t.text = "клинок косы"
+                                        case 'acid fangs':
+                                            t.text = "кислотные клыки"
+                                        case 'clawed hand':
+                                            t.text = "когтистая рука"
+                                        case 'left pincer':
+                                            t.text = "левая клешня"
+                                        case 'right pincer':
+                                            t.text = "правая клешня"
+                                        case 'eye':
+                                            t.text = "глаз"
+                                        case 'venomous spit':
+                                            t.text = "ядовитый плевок"
+                                        case 'acid spit':
+                                            t.text = "кислотный плевок"
+                                        case 'left hand claws':
+                                            t.text = "когти левой руки"
+                                        case 'right hand claws':
+                                            t.text = "когти правой руки"
+                                        case 'venom-fangs':
+                                            t.text = "ядовитые клыки"
+                                        case 'sharp talons':
+                                            t.text = "острые когти"
+                                        case 'tail spear':
+                                            t.text = "хвостовое копьё"
+
+
 
             def add_missing_verbs_if_verbClass(Def: ET.Element):
                 """Verb_Shoot
@@ -1310,8 +1356,6 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                                 new_tag = str(idx3)
                         new_tag = new_tag.replace(" ", "_").replace("-", "")
 
-                        # TODO: Тут добавил замену дефиса, может быть лишней
-
                         li.tag = new_tag
                     # print("--Итоговый элемент с заменненными <li>--")
                     # ET.dump(parent)
@@ -1337,8 +1381,8 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                             tKey_text = ''
                             tKeyTip = ''
                             tKeyTip_text = ''
-                            tKey_tag_text_el = [ET.Element]
-                            tKeyTip_tag_text_el = [ET.Element]
+                            tKey_tag_text_el: list[ET.Element] = []
+                            tKeyTip_tag_text_el: list[ET.Element] = []
                             for el in element:
                                 match el.tag:
                                     case 'tKey':
@@ -1360,7 +1404,6 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                                         tKeyTip_text = el.text
                                         tKeyTip_tag_text_el.append(el)
 
-                            #   TODO: Проверить
                             if tKey and tKey_text:
                                 for els in tKey_tag_text_el:
                                     els.clear()
@@ -1422,6 +1465,11 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                 add_missing_verbs_if_verbClass(elem)
                 ThingDef_add_strings(elem)
                 translate_ThingDef_tools(elem)
+                comps = elem.find('comps')
+                if comps is not None:
+                    for ee in comps:
+                        translate_ThingDef_tools(ee)
+
                 ThingDef_MVCF_Comps_CompProperties_VerbProps(elem)
 
 
@@ -1450,12 +1498,38 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                 text1 = text1.replace("-&gt;", "->")
                 text1 = text1.replace(' -- ', ' - ')
 
-                try:
-                    _, folder_, defname, path = elem_path_.split('\\', 3)
-                    path = path.replace('\\', '.') + '.' + child_.tag.replace('\\', '.')
-                except ValueError:
-                    _, folder_, defname = elem_path_.split('\\', 3)
-                    path = child_.tag.replace('\\', '.')
+                # try:
+                a_ = elem_path_.split('\\', 3)
+                # print("a_: ", a_)
+                match len(a_):
+                    case 4:
+                        folder_ = a_[1]
+                        defname = a_[2]
+                        path = a_[3].replace('\\', '.') + '.' + child_.tag.replace('\\', '.')
+                    case 3:
+                        folder_ = a_[1]
+                        defname = a_[2]
+                        path = child_.tag.replace('\\', '.')
+                    case 2:
+                        folder_ = a_[1]
+                        defname = ""
+                        path = child_.tag.replace('\\', '.')
+                    case _:
+                        folder_ = "STRANGE_DEF"
+                        defname = ""
+                        path = child_.tag.replace('\\', '.')
+
+
+
+                    #
+                    #
+                    #
+                    # _, folder_, defname, path = elem_path_.split('\\', 3)
+                    # path = path.replace('\\', '.') + '.' + child_.tag.replace('\\', '.')
+                # except ValueError:
+                #     _, folder_, defname = elem_path_.split('\\', 3)
+                #     path = child_.tag.replace('\\', '.')
+
 
                 if print_now:
                     if text1.isspace():
@@ -1464,7 +1538,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
                     return None
 
-                if re.match(r"\d", elem_path_.partition("Def\\")[2]):
+                if match(r"\d", elem_path_.partition("Def\\")[2]):
                     Error_log.append(f"Defname start with digit - that cause XML error: {elem_path_}")
                     printy(
                         fr"Skipping string {elem_path_ + '/' + child_.tag : <75} [r]Defname start with digit - that cause XML error: {elem_path_}@",
@@ -2052,10 +2126,13 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                         for line in root:
                             # input(line.text + f' tail = {line.tail.encode()}')
                             if line.tag is not etree.Comment:
+                                try:
+                                    a = etree.Comment(f' {"EN: " if S.Comment_add_EN else ""}{line.text.replace("--", "-")} ')
+                                    a.tail = f'\n{S.tags_left_spacing}'
+                                    line.addprevious(a)
+                                except Exception as ex:
+                                    print(ex, "Error comment adding:", line.text)
 
-                                a = etree.Comment(f' {"EN: " if S.Comment_add_EN else ""}{line.text} ')
-                                a.tail = f'\n{S.tags_left_spacing}'
-                                line.addprevious(a)
                             else:
                                 a = line.getprevious()
                                 if a is not None and a.tail is not None:
@@ -2072,6 +2149,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                         except IndexError:
                             printy("[r]\tIndex Error at {path}\\{name}")
                     with open(f"{path}\\{name}", "wb") as Keyed_file:
+                        Keyed_file.write(bytes('<?xml version="1.0" encoding="utf-8" ?>\n', encoding='utf8'))
                         Keyed_file.write(etree.tostring(root, encoding="utf-8"))
                     # except Exception as ex:
                     #     warning("Bad Keyed Comment adding" + str(ex))
@@ -2169,7 +2247,7 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
         make_about_folder()
         if S.Image_on_Preview:
-            image_edit.main(FoldersProg.prog + "\\Images\\Preview\\New_Image.png", S.Position_of_image,
+            image_edit.main(str(FoldersProg.prog) + "\\Images\\Preview\\New_Image.png", S.Position_of_image,
                             S.Position_of_image_Offset_x, S.Position_of_image_Offset_y)
 
     loadfolder_check_folders()
@@ -2187,26 +2265,36 @@ def main(Entered_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
     try:
         if delete_folders:
             for ff in delete_folders:
-                shutil.rmtree(ff, ignore_errors=True)
+                rmtree(ff, ignore_errors=True)
     except Exception as ex:
         Error_log.append(f"Error Delete {delete_folders} {ex} \n\n")
 
+
+    try:
+        printy("Check for identical file names.", 'n')
+
+        Finalizing.main(FoldersProg)
+
+    except Exception as ex:
+        printy(fr"[r]\[ERROR\]@ Need error log --> [r]@ {escape_printy_string(str(ex))} \n\n", predefined='<m')
 
 
 
     try:
 
-        shutil.rmtree(New_Name, ignore_errors=True)
-        shutil.copytree("_Translation",
+        rmtree(New_Name, ignore_errors=True)
+        copytree("_Translation",
                         sanitize_filename(New_Name), dirs_exist_ok=True)
-        shutil.rmtree('_Translation', ignore_errors=True)
+        rmtree('_Translation', ignore_errors=True)
     except Exception as ex:
         Error_log.append(f"Error rename _Translation {ex} \n\n")
         printy(fr"[r]\[ERROR\]@ rename _Translation {escape_printy_string(str(ex))} \n\n", predefined='<m')
 
+
+
     if Error_log:
         printy(r"[r]\[ERROR\]@ Need error log --> [r]Opening Error_log.txt@", predefined='<m')
-        _Tr = New_Name
+        _Tr = sanitize_filename(New_Name)
         os.makedirs(_Tr, exist_ok=True)
         with open(fr'{_Tr}\\Error_log.txt', 'w', encoding="utf-8") as er_log:
             for el in Error_log:
@@ -2520,10 +2608,34 @@ if __name__ == '__main__':
 
     def updater():
         if S.Check_update:
-            if Check_New_Version.Check_And_Update(Version_of_Text_grabber):
-                Window_Text_grabber.destroy()
-            else:
-                printy(f"Latest version {Version_of_Text_grabber}", 'n')
+
+            try:
+                newest_version = Check_New_Version.Get_newest_version_number()
+                if newest_version > Version_of_Text_grabber:
+                    if S.Settings_language == 'ru':
+                        dialog_message = f"Доступна новая версия Text grabber {newest_version}. Скачать?"
+                        dialog_download = "Скачать"
+                        dialog_cansel = "Не скачивать"
+                    else:
+                        dialog_message = f"New version avalible {newest_version}. Download?"
+                        dialog_download = "Download"
+                        dialog_cansel = "Cancel"
+
+                    Update_dialog = ttkbootstrap.dialogs.MessageDialog(dialog_message, buttons=[dialog_cansel, dialog_download + ":success"])
+                    Update_dialog.show()
+
+                    result = Update_dialog.result
+                    # print('result: ', result)
+                    if result == dialog_download:
+                        Check_New_Version.Download_new_version()
+                        printy("Need to Update", 'r')
+                        Window_Text_grabber.destroy()
+                    else:
+                        printy(f"Latest version {Version_of_Text_grabber}", 'n')
+
+            except Exception as e:
+                printy(f"[r]\[ERROR\]@ version updater {e}", predefined='<m')
+                Error_log.append(f"Error version updater {e} \n\n")
 
 
     Window_Text_grabber.after(10, lambda: set_appwindow(root=Window_Text_grabber))

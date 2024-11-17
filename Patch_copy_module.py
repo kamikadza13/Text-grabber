@@ -27,8 +27,17 @@ def find_patches_with_text(patches_list: list[TranslatingFile], Tags_to_extracti
                 tree = ET.parse(xml_file)
             root = tree.getroot()
             operations = root.findall("Operation")
+
                 # Remove Operation tags
             for operation in operations:
+                if operation.get('Class') == 'PatchOperationSequence':
+                    ops = operation.find("operations")
+                    if ops is not None:
+                        for li in ops:
+                            a = li.iter(Tags_to_extraction)
+                            if not list(a):
+                                ops.remove(li)
+
                 a = operation.iter(Tags_to_extraction)
                 if not list(a):
                     root.remove(operation)
