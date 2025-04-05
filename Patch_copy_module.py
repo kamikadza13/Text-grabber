@@ -1,28 +1,19 @@
 import os
-from dataclasses import dataclass
+from pathlib import Path
 
 from lxml import etree as ET
 
 
-@dataclass
-class TranslatingFile:
-    path: str
-    name: str
-    new_path: str
-
-    def __repr__(self):
-        return f"{self.path}"
-
-def find_patches_with_text(patches_list: list[TranslatingFile], Tags_to_extraction: list[str]):
+def find_patches_with_text(patches_list: dict[Path, Path], Tags_to_extraction: list[str]):
     if not patches_list:
         return
 
 
-    for tf in patches_list:
+    for path, nfolder in patches_list.items():
 
         try:
-            with open(tf.path, 'r', encoding="utf-8") as xml_file:
-                # print(tf.path)
+            with open(path, 'r', encoding="utf-8") as xml_file:
+                # print(p)
                 # input()
                 tree = ET.parse(xml_file)
             root = tree.getroot()
@@ -49,9 +40,10 @@ def find_patches_with_text(patches_list: list[TranslatingFile], Tags_to_extracti
                 continue
             else:
                 ...
-                # print("Try write patch to:", os.path.join(tf.new_path, tf.name))
-                os.makedirs(tf.new_path, exist_ok=True)
-                tree.write(os.path.join(tf.new_path, tf.name), pretty_print=True, encoding='utf-8')
+                # print("Try write patch to:", os.path.join(np, tf.name))
+                os.makedirs(nfolder, exist_ok=True)
+
+                tree.write(nfolder / path.name, pretty_print=True, encoding='utf-8')
 
         except ET.ParseError as ex:
             print("Patch reading/writing/text-detecting error")

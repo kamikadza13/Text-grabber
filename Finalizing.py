@@ -2,15 +2,15 @@ import re
 from pathlib import Path
 
 
-def main(FP):
+def main(FP: Path):
 
-    all_files = Path(FP.mod).glob('_Translation/**/*.xml')
+    all_files = FP.glob('_Translation/**/*.xml')
     # all_files = list(Path(FP.mod).glob('RimThunder - Core rus/**/*.xml'))
 
     duble_list = []
     # print(list(all_files))
 
-    for file in all_files:
+    for file in all_files: # type: Path
         # print(file)
         fstem = file.stem
         # print(fstem)
@@ -36,16 +36,5 @@ def main(FP):
             duble_list.append(fstem)
 
     # print(duble_list)
-
-
-
-
-if  __name__ == '__main__':
-
-    class FPP:
-        mod = r'D:\Games\steamapps\workshop\content\294100\3070495204'
-    main(FPP)
-
-
 
 

@@ -3,26 +3,44 @@ import json
 import os
 import re
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, List, Tuple, Union
 
+import lxml
 import lxml.etree as etree
-from printy import printy, escape as printy_escape
+from lxml.etree import Element, _Element
+
+from GlobVars import state
 
 
 @dataclass
-class RootElemAndElems:
-    """
-    root_tag: etree.Element
-    last_node: etree.Element
-    """
-    root_tag: etree.Element
-    last_node: etree.Element
+class Pp:
+    req_modsID_list: List[str] = None
+    '''[
+    Ludeon.RimWorld.Royalty,
+    zhrocks11.letstrade
+    ]'''
+    # mods: Dict[Path, tuple[str]] = None
+
+    ModSettingsFramework_Keyed_id_list = None
+    '''
+    [
+        RM_GestaltLevel1Bandwith
+        RM_GestaltLevel2Bandwith
+    ]
+    
+            <Operation Class="ModSettingsFramework.PatchOperationSliderFloat">
+        	<id>RM_GestaltLevel1Bandwith</id>'''
 
 
+    all_grabbed_Keyed_list: Dict[Path, List[str]] = None
+    '''{Path: [<Elem1>, <Elem2>]}'''
+    def __post_init__(self):
+        self.req_modsID_list = []
+        self.ModSettingsFramework_Keyed_id_list = []
+        self.all_grabbed_Keyed_list = {}
 
 
-
-# Parent_name_list_patch_grabber, Parent_elem_patch_grabber = [], []
-# output_folder = ''
 
 
 
@@ -30,24 +48,30 @@ sabaka_names_all_patch_grabber = []
 
 
 patches_file_count = 0
-mod_pathes_and_req_mods: {str, ()} = {}
-mods_folders = {}
 
 
 
+def find_patch_pathes(patches_folder: Path):
+    return list(patches_folder.rglob("*.xml"))
 
 
+def main(folder_required_mods: Tuple, patches_folder=Path('.'), tags_to_extract=None, database_path=None):
+    """
+    Return Keyed dict with list of strings: Dict[Path, List[str]]
+        {Path: [<Elem1>, <Elem2>]}
+    Also update """
 
+    @dataclass
+    class ReqModAndText:
+        """
+        req_mods: Tuple[str]
+        text: str"""
+        req_mods: Tuple[str] | tuple
+        text: str
 
-
-
-
-
-
-
-
-
-def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_one_File=False, required_mods: list = None, database_path=None):
+    SS = Pp()
+    SS.req_modsID_list.extend(folder_required_mods)
+    '''Моды для всей папки с патчами'''
 
 
 
@@ -59,49 +83,43 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
     list_of_extract_tags_patch_grabber = [ll.strip("\n ") for ll in tags_to_extract]
 
     sibling_list_patch_grabber = []
-    Keyed_tags_patch_grabber = []
-    Needed_mods = []
 
-    if required_mods:
-        Needed_mods.extend(required_mods)
-
-
-    def add_string_to_output(string_or_EtElement):
-
-        if Needed_mods:
-            need_mods = tuple(Needed_mods)
-        else:
-            need_mods = ()
-
-        if string_or_EtElement is str:
-            text = string_or_EtElement
-        else:
-            text = etree.tostring(string_or_EtElement, pretty_print=True, encoding=str)
-
-        current_grabbed_Mod_and_string_list.append((need_mods, text))
-
-
-    def operation_selector(a: etree.Element):
+    def output_not_in_siblings(r: Element):
+        q = etree.tostring(r, encoding=str, pretty_print=True, with_tail=False)
+        if q in sibling_list_patch_grabber:
+            # print(f"Элемент уже выведен : {_}")
+            return False
+        sibling_list_patch_grabber.append(q)
+        return True
 
 
 
-        def output_not_in_siblings(r: etree.Element):
-            _ = etree.tostring(r, encoding=str, pretty_print=True, with_tail=False)
-            if _ in sibling_list_patch_grabber:
-                # print(f"Элемент уже выведен : {_}")
-                return False
-            sibling_list_patch_grabber.append(_)
-            return True
+    def add_string_to_output(string_or_Element: Union[str, Element]):
+        if output_not_in_siblings(string_or_Element):
 
-        # def update_parents(Parent_name_lis: list, Parent_elem_lis: list, sabaka_name: etree.Element, xpath: str):
-        #     print("def update_parents:")
-        #     print(Parent_name_lis)
-        #     print(Parent_elem_lis)
-        #     print(sabaka_name)
-        #     print(xpath)
-        #     ...
+            need_mods = tuple(SS.req_modsID_list) if SS.req_modsID_list else ()
+            text = string_or_Element if string_or_Element is str else etree.tostring(string_or_Element, pretty_print=True, encoding=str)
 
-        def xpath_to_elems(xpath: str, value: etree.Element):
+            current_grabbed_Mod_and_string_list.append(ReqModAndText(need_mods,text))
+
+
+    def operation_selector(a: Element):
+
+
+
+
+
+        def xpath_to_elems(xpath: str, value: Element):
+
+            @dataclass
+            class RootElemAndElems:
+                """
+                root_tag: Element
+                last_node: Element
+                """
+                root_tag: lxml.etree.Element
+                last_node: lxml.etree.Element
+
             def make_elem_tree_by_elems_str(list_of_elems: list) -> RootElemAndElems:
                 # for idx, el in enumerate(list_of_elems):
                 #     if "[" in el:
@@ -109,11 +127,11 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
                 #         list_of_elems[idx] = re.sub(fr"\[.*]", '', el)
                 start_pos = 1
                 if ("<" or ">") in list_of_elems[0]:
-                    print("Bad xml creating - add random Thingdef", xpath, file)
-                    root_node = etree.Element('ThingDef')
+                    print("Bad xml creating - add random Thingdef", xpath, patch_file_path)
+                    root_node = Element('ThingDef')
                     start_pos = 0
                 else:
-                    root_node = etree.Element(list_of_elems[0])
+                    root_node = Element(list_of_elems[0])
 
                 last_node = root_node
                 for elem in list_of_elems[start_pos:]:
@@ -124,27 +142,80 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
                     else:
                         last_node = etree.SubElement(last_node, elem)
                 # print("root_node", root_node, "last_node", last_node)
-                _ = RootElemAndElems(root_node, last_node)
-                return _
+                return RootElemAndElems(root_node, last_node)
 
-            def clear_xpath(xpath_: str):
-                _ = xpath_
-                xpath_ = re.sub(fr'not\(.*?\)', '', xpath_).replace("\n", "").replace("\t", "").replace("[]",
-                                                                                                        '').strip()
-                if xpath_.startswith("*/"):
-                    xpath_ = re.sub(r"\*/(.*?Def\[)|\*/(.*?Def/)", "\\1\\2", xpath)
-                # if xpath_ != _:
-                #     print("xpath_ до:   ", _)
-                #     print("xpath_ после:", xpath_)
-                return xpath_
+            def clear_xpath(xpath: str):
 
-            value_str = etree.tostring(value, encoding=str, pretty_print=True, with_tail=False)
-            if not any([a in value_str for a in list_of_extract_tags_patch_grabber]):
-                del value_str
+                def remove_not_recursive(s):
+                    not_pos = s.find('not(')
+                    if not_pos == -1:
+                        return s
+
+                    # Ищем логические операторы перед not(...)
+                    operators = [' and ', ' or ', ' AND ', ' OR ']
+                    op_pos = max((s.rfind(op, 0, not_pos) for op in operators), default=-1)
+
+                    # Находим границы not(...)
+                    start = not_pos
+                    count = 1
+                    i = start + 4
+                    while i < len(s) and count > 0:
+                        if s[i] == '(': count += 1
+                        if s[i] == ')': count -= 1
+                        i += 1
+
+                    # Определяем границы для удаления
+                    remove_start = op_pos if op_pos != -1 else start
+                    remove_end = i
+
+                    # Формируем новую строку
+                    new_str = s[:remove_start] + s[remove_end:]
+
+                    return remove_not_recursive(new_str)
+
+
+                removed_NOT = remove_not_recursive(xpath)
+
+                xpath = removed_NOT.replace("\n", "").replace("\t", "").replace("[]", '').strip()
+
+                if xpath.startswith("*/"):
+                    xpath = re.sub(r'^\*/(.*?Def.*?)([[/])', r'\1\2', xpath, count=1)
+
+                return xpath
+
+
+            def just_output_check(value):
+                counter = 0
+                val_lengh = len(list(value))
+
+                for ch in value:
+                    enwith_Def = False
+                    has_defname_into = False
+                    ch: _Element
+                    if ch.tag.endswith("Def"):
+                        enwith_Def = True
+                    if ch.xpath('boolean(child::defName)'):
+                        has_defname_into = True
+                    if enwith_Def and has_defname_into:
+                        counter += 1
+                        add_string_to_output(ch)
+                # print('counter', counter)
+                # print('val_lengh', val_lengh)
+                if counter == val_lengh:
+                    return True
+                return False
+
+
+            elem_string = etree.tostring(value, encoding=str, pretty_print=True, with_tail=False)
+            if not any([a in elem_string for a in list_of_extract_tags_patch_grabber]):
+                return None
+
+
+
+            if just_output_check(value):
                 return None
 
             xpath = clear_xpath(xpath)
-            # or_count = len(re.findall(r' or ', xpath))
 
             defnames = re.findall(r'defName\s?=\s?[\"|\'](.*?)[\"|\']', xpath)
             sabaka_names = re.findall(r'@Name\s?=\s?[\"|\'](.*?)[\"|\']', xpath)
@@ -157,9 +228,7 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
 
             if xpath in ["/", "//", "", "Defs", "/Defs", '//Defs']:
                 for ch in value:
-                    if output_not_in_siblings(ch):
-                        add_string_to_output(ch)
-
+                    add_string_to_output(ch)
                 return None
 
             def split_xpath(_):
@@ -188,6 +257,7 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
                         exit_list.append(b)
 
             elif sabaka_names:
+                #   TODO: sabaka_name Ничего не делает
                 for sabaka_name in sabaka_names:
                     sabaka_names_all_patch_grabber.append(sabaka_name)
                     # update_parents(Parent_name_list_patch_grabber, Parent_elem_patch_grabber, sabaka_name, xpath)
@@ -207,7 +277,7 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
 
             return exit_list
 
-        def PatchOperationAdd(operation_add: etree.Element):
+        def PatchOperationAdd(operation_add: Element):
             xpath = ""
             value = ""
             for a in operation_add:
@@ -228,14 +298,11 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
                     roots_and_elems.last_node.append(copy.deepcopy(child))
                 # print(f"Добавление элемента: {roots_and_elems.root_tag.tag}")
 
-                if output_not_in_siblings(roots_and_elems.root_tag):
+                add_string_to_output(roots_and_elems.root_tag)
 
-                    add_string_to_output(roots_and_elems.root_tag)
-
-
-        def PatchOperationReplace(operation_replace: etree.Element):
+        def PatchOperationReplace(operation_replace: Element):
             xpath = ""
-            value = etree.Element("d")
+            value = Element("d")
 
             for a in operation_replace:
                 if a.tag == "xpath":
@@ -244,13 +311,14 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
                 if a.tag == "value":
                     value = a
 
-            # if 1 == 1:
             try:
                 list_of_roots_and_elems_to_add = xpath_to_elems(xpath, value)
                 if list_of_roots_and_elems_to_add is None:
                     return None
                 for roots_and_elems in list_of_roots_and_elems_to_add:
                     for child in value:
+
+                        # dump(child)
                         try:
                             if roots_and_elems.root_tag == roots_and_elems.last_node:
                                 add_string_to_output(roots_and_elems.root_tag)
@@ -261,13 +329,12 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
                             _.remove(roots_and_elems.last_node)
                         except Exception as ex:
                             print("Error:", ex)
-                    if output_not_in_siblings(roots_and_elems.root_tag):
-                        add_string_to_output(roots_and_elems.root_tag)
+                    add_string_to_output(roots_and_elems.root_tag)
 
             except Exception as ex:
                 print("Error:", ex)
 
-        def PatchOperationSequence(op: etree.Element):
+        def PatchOperationSequence(op: Element):
             for a1 in op:
                 if a1.tag == "operations":
                     for operation in a1:
@@ -275,7 +342,7 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
                 elif a1.tag == 'match':
                     operation_selector(a1)
 
-        def PatchOperationFindMod(Operation_Class_PatchOperationFindMod: etree.Element):
+        def PatchOperationFindMod(Operation_Class_PatchOperationFindMod: Element):
 
             New_mods = []
 
@@ -286,13 +353,20 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
                     (('Ideology', 'Rimworld - Ideology', "Ideology [Official DLC]"), 'Ludeon.Rimworld.Ideology'),
                     (('Biotech', 'Rimworld - Biotech', "Biotech [Official DLC]"), 'Ludeon.Rimworld.Biotech'),
                     (('Anomaly', 'Rimworld - Anomaly', "Anomaly [Official DLC]"), 'Ludeon.Rimworld.Anomaly'),
+                    (('Vanilla Factions Expanded - Ancients', 'Vanilla Factions Expanded Ancients'),'oskarpotocki.vfe.vfea'),
+                    (('Vanilla Factions Expanded - Classical', 'Vanilla Factions Expanded Classical'),'oskarpotocki.vfe.classical'),
                     (('Vanilla Factions Expanded - Deserters', 'Vanilla Factions Expanded Deserters', 'Deserters'), 'oskarpotocki.vfe.deserters'),
-                    (('Vanilla Factions Expanded - Megacorp', 'Vanilla Factions Expanded Megacorp'), 'oskarpotocki.vfe.megacorp'),
-                    (('Vanilla Factions Expanded - Vikings', 'Vanilla Factions Expanded Vikings'), 'oskarpotocki.vfe.vikings'),
-                    (('Vanilla Factions Expanded - Pirates', 'Vanilla Factions Expanded Pirates'), 'oskarpotocki.vfe.pirates'),
-                    (('Vanilla Factions Expanded - Ancients', 'Vanilla Factions Expanded Ancients'), 'oskarpotocki.vfe.vfea'),
                     (('Vanilla Factions Expanded - Empire', 'Vanilla Factions Expanded Empire'), 'oskarpotocki.vfe.empire'),
+                    (('Vanilla Factions Expanded - Insectoids 2', 'Vanilla Factions Expanded Insectoids 2'), 'oskarpotocki.vfe.insectoid2'),
+                    (('Vanilla Factions Expanded - Mechanoids', 'Vanilla Factions Expanded Mechanoids'), 'oskarpotocki.vfe.mechanoid'),
+                    (('Vanilla Factions Expanded - Medieval', 'Vanilla Factions Expanded Medieval'), 'oskarpotocki.vanillafactionsexpanded.medievalmodule'),
+                    (('Vanilla Factions Expanded - Megacorp', 'Vanilla Factions Expanded Megacorp'), 'oskarpotocki.vfe.megacorp'),
+                    (('Vanilla Factions Expanded - Pirates', 'Vanilla Factions Expanded Pirates'), 'oskarpotocki.vfe.pirates'),
+                    (('Vanilla Factions Expanded - Settlers', 'Vanilla Factions Expanded Settlers'), 'oskarpotocki.vanillafactionsexpanded.settlersmodule'),
+                    (('Vanilla Factions Expanded - Tribals', 'Vanilla Factions Expanded Tribals'), 'oskarpotocki.vfe.tribals'),
+                    (('Vanilla Factions Expanded - Vikings', 'Vanilla Factions Expanded Vikings'), 'oskarpotocki.vfe.vikings'),
                     (('Combat Extended', 'CE'), 'ceteam.combatextended'),
+                    (('Vanilla Anomaly Expanded - Insanity', 'Vanilla Anomaly Expanded Insanity'), 'vanillaexpanded.vanomalyeinsanity'),
 
                                   )
 
@@ -303,8 +377,8 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
                         return m[1]
 
                 modNames = (modName,)
-                results = [data['database'][mod_id] for mod_id in data['database'] if
-                           data['database'][mod_id]["name"] in modNames]
+                results = [data['database'][mod_id_] for mod_id_ in data['database'] if
+                           data['database'][mod_id_]["name"] in modNames]
                 if results:
                     packageId = max(results, key=lambda x: x['gameVersions'])['packageId']
 
@@ -321,7 +395,7 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
                             modId = search_mod_id_by_name(li.text)
 
                             New_mods.append(modId)
-                            Needed_mods.append(modId)
+                            SS.req_modsID_list.append(modId)
                             # print(mod_name)
                     case "match":
                         operation_selector(ch)
@@ -334,23 +408,23 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
                         for a in ch:
                             operation_selector(a)
             for mod in New_mods:
-                Needed_mods.remove(mod)
+                SS.req_modsID_list.remove(mod)
 
-        def PatchOperationConditional(Operation_Class_PatchOperationConditional: etree.Element):
+        def PatchOperationConditional(Operation_Class_PatchOperationConditional: Element):
             for ch in Operation_Class_PatchOperationConditional:
                 if ch.tag == "match":
                     operation_selector(ch)
                 if ch.tag == "nomatch":
                     operation_selector(ch)
 
-        def PatchOperationMakeGunCECompatible(Patch_elem: etree.Element):
+        def PatchOperationMakeGunCECompatible(Patch_elem: Element):
             if not any(el.tag == 'defName' for el in Patch_elem):
                 return
             Patch_elem.tag = 'ThingDef'
 
             add_string_to_output(Patch_elem)
 
-        def ModSettingsFramework(Patch_elem: etree.Element):
+        def ModSettingsFramework(Patch_elem: Element):
             """
             from patch:
             <Operation Class="ModSettingsFramework.PatchOperationSliderFloat">
@@ -364,6 +438,9 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
         	Keyed:
 
         		"""
+
+
+
             label = ''
             tooltip = ''
             idd = ''
@@ -377,27 +454,25 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
             if idd:
 
                 if label:
-                    if idd not in Keyed_tags_patch_grabber:
-
-
+                    if idd not in SS.ModSettingsFramework_Keyed_id_list:
                         current_grabbed_Keyed.append(f"<{idd}>{label}</{idd}>")
-                        Keyed_tags_patch_grabber.append(idd)
+                        SS.ModSettingsFramework_Keyed_id_list.append(idd)
                 if tooltip:
-                    if idd + 'Tooltip' not in Keyed_tags_patch_grabber:
+                    if idd + 'Tooltip' not in SS.ModSettingsFramework_Keyed_id_list:
                         current_grabbed_Keyed.append(f"<{idd}Tooltip>{tooltip}</{idd}Tooltip>")
-                        Keyed_tags_patch_grabber.append(idd + 'Tooltip')
+                        SS.ModSettingsFramework_Keyed_id_list.append(idd + 'Tooltip')
 
 
 
         Op_class: str = a.get("Class", '')
         Op_mayrequire: str = a.get("MayRequire")
-        New_mods2 = []
+        new_req_modsID_for_Element = []
         if Op_mayrequire is not None:
             mod_ids = Op_mayrequire.split(',')
             for mod_id in mod_ids:
                 m_id = mod_id.strip()
-                New_mods2.append(m_id)
-                Needed_mods.append(m_id)
+                new_req_modsID_for_Element.append(m_id)
+                SS.req_modsID_list.append(m_id)
 
         match Op_class:
 
@@ -435,101 +510,93 @@ def main(patches_folder='', output_folder='', tags_to_extract=None, output_in_on
                 for child in a:
                     operation_selector(child)
 
-        for mod in New_mods2:
-            Needed_mods.remove(mod)
+        for new_req_mod in new_req_modsID_for_Element:
+            SS.req_modsID_list.remove(new_req_mod)
 
 
-    printy(f"\t\t\t\\{printy_escape(patches_folder)}", 'p>', end='')
-    printy(f"--->", 'b>', end='')
-    printy(f"{printy_escape(output_folder)}", 'p>')
-
-
-
-
-    def find_patch_pathes():
-        _a = []
-        for dirpath, dirnames, filenames in os.walk(patches_folder):
-            for name in filenames:
-                if name.endswith(".xml"):
-
-                    _a.append(f"{dirpath}\\{name}")
-        return _a
-
-    founded_patches = find_patch_pathes()
-
-    # print('Founded patches:', founded_patches)
+    # printy(f"\t\t\t\\{printy_escape(patches_folder)}", 'p>', end='')
+    # printy(f"--->", 'b>')
 
 
 
 
-    all_mod_and_string_dict_list: {str, tuple} = {}
-    """{
-    path1: [((mods1), text), ((mods2), text)...]
-    path2: [((mods3), text), ((mods4), text)...]
-    }"""
 
-    all_grabbed_Keyed_list = {}
+    patches_file_pathes_list = find_patch_pathes(patches_folder)
+    '''Founded patches'''
+    # print('Founded patches:', [str(path) for path in patches_file_pathes_list])
 
-    for file in founded_patches:
+
+
+
+    all_mod_and_string_list_dict: Dict[Path, List[ReqModAndText]] = {}
+    """
+    req_mods: Tuple[str]
+    text: str"""
+
+
+
+
+    for patch_file_path in patches_file_pathes_list:
         # try:
-        with open(file, encoding="utf-8") as patch:
-            # print(f"file:", file)
-
+        with open(patch_file_path, encoding="utf-8") as patch:
             # text_final_patch_grabber.append(f"<!-- Filename: {file} -->\n")
             parser = etree.XMLParser(remove_comments=True, remove_blank_text=True, )
             tree = etree.parse(patch, parser)
             root = tree.getroot()
-        current_grabbed_Mod_and_string_list: [tuple] = []
-        current_grabbed_Keyed = []
+
+        current_grabbed_Mod_and_string_list: List[ReqModAndText] = []
+
+        current_grabbed_Keyed: list[str] = []
+        '''<RM_GestaltLevel1Bandwith>Настроить проп. способность Гештальта 1-го уровня</RM_GestaltLevel1Bandwith>'''
+
+
 
         for operation1 in root:
-
+            '!!!!!!!!!!!!!!!!!!!!'
             operation_selector(operation1)
+            '!!!!!!!!!!!!!!!!!!!!'
         if current_grabbed_Mod_and_string_list:
-            all_mod_and_string_dict_list[file] = current_grabbed_Mod_and_string_list
-
+            all_mod_and_string_list_dict[patch_file_path] = current_grabbed_Mod_and_string_list
 
         if current_grabbed_Keyed:
-            all_grabbed_Keyed_list[file] = current_grabbed_Keyed
+
+            state.keyed_from_patches[patch_file_path] = current_grabbed_Keyed
 
 
 
-    def output_to_files(oneFile=False):
+    def Update_glob_state_mod_folders():
+        """Переделка словаря из
+         {Путь: (моды), [текст]} в
+            {
+            (Моды): {Путь: [текст]}
+            }
+        """
 
-        global mods_folders
+        # state.mods_folders
 
+        '''
+        -----{
+        -----(req mods): 
+        ---------{Path:
+        ------------[text1, text2]
+        ---------}
+        -----}
+        '''
+        # print('all_mod_and_string_list_dict', all_mod_and_string_list_dict)
 
-
-
-        for orig_file_path in all_mod_and_string_dict_list:
-            # print('File:', orig_file_path)
-            for req_mods_and_element in all_mod_and_string_dict_list[orig_file_path]:
-                # print("mods:", req_mods_and_element[0])
-                # print("text:", req_mods_and_element[1])
-                # print("--------------------")
-                mf = req_mods_and_element[0] if req_mods_and_element[0] != () else ()
-                # print(f'mod: "{mf}"')
-                if mf not in mods_folders:
-                    # print(mf, "not in", [a for a in mods_folders])
-                    mods_folders[mf] = {orig_file_path: [req_mods_and_element[1]]}
+        for orig_file_path in all_mod_and_string_list_dict:
+            for req_and_text in all_mod_and_string_list_dict[orig_file_path]:
+                if req_and_text.req_mods not in state.mods_folders:
+                    state.mods_folders[req_and_text.req_mods] = {orig_file_path: [req_and_text.text]}
                 else:
-                    # print(mf, "IS INTO", [a for a in mods_folders])
-                    # print(mods_folders[mf])
-                    if orig_file_path not in mods_folders[mf]:
-                        mods_folders[mf][orig_file_path] = [req_mods_and_element[1]]
-
+                    if orig_file_path not in state.mods_folders[req_and_text.req_mods]:
+                        state.mods_folders[req_and_text.req_mods][orig_file_path] = [req_and_text.text]
                     else:
-                        mods_folders[mf][orig_file_path].append(req_mods_and_element[1])
+                        state.mods_folders[req_and_text.req_mods][orig_file_path].append(req_and_text.text)
 
-    output_to_files(output_in_one_File)
+    Update_glob_state_mod_folders()
 
-    global mod_pathes_and_req_mods
-    # print('all_grabbed_Keyed_list', all_grabbed_Keyed_list)
-    return mod_pathes_and_req_mods, all_grabbed_Keyed_list
-    # if all_grabbed_Keyed_list:
-    #     return all_grabbed_Keyed_list
-    # else:
-    #     return None
+    return
 
 def print_Keyed(grabbed_Keyed_dict_list: dict, output_folder: str):
     if grabbed_Keyed_dict_list:
