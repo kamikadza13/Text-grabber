@@ -1,9 +1,18 @@
 Update log
 
+    TODO: Проверить Li_Class_Replace
+    TODO: Проверить SettingsValues.Adding_xml_version_encoding_string
 	TODO: add adding strings into settings. What is it?
 	TODO: fix same patches (in different folders) grabbing
 
 
+Update 1.4.1
+	Added Textgrabber icon at Taskbar (When working)!. -Why? -Because i can!
+	Fixed slash/backslash problem in loadfolder
+	added copy-patches in settings and disable by default
+    added adding xml-version-encoding string setting
+    added error (notification) type: li in patches. Need Manual check.
+	
 
 Update 1.4.0
 	Improved patch grabbing - Removed more unnecessary lines
