@@ -82,7 +82,11 @@ commandDesc
 commandLabel
 baseInspectLine
 leaderTitle
-structureLabel'''
+structureLabel
+label.slateref
+text.slateref
+customletterlabel.slateref
+customlettertext.slateref'''
         E2_Part_of_tag_to_extraction = '''Message
 Label
 label
@@ -296,6 +300,14 @@ ScenPart_='''
     section_config = configparser.RawConfigParser(allow_no_value=False)
     section_config.optionxform = str
 
+
+    no_text_check_label_list = [
+        'label.slateref',
+        'text.slateref',
+        'customletterlabel.slateref',
+        'customlettertext.slateref',
+    ]
+
     def get(self, name):
         return getattr(self, name)
 
@@ -346,7 +358,11 @@ class SettingsLoader:
                 return self.config.get(section, option)
             match option:
                 case 'Path_to_Data' | 'Path_to_Mod_folder' | 'Path_to_Another_folder':
-                    return str(Path(self.config.get(section, option)))
+                    get = self.config.get(section, option)
+                    if get == 'None':
+                        return None
+                    else:
+                        return str(Path(get))
                 case _:
                     return self.config.get(section, option)
 
@@ -445,7 +461,6 @@ class SettingsLoader:
         r['Forbidden_text'] = self.load_list_from_file(
             self.SV.SettingsPath.Forbidden_text,
             self.SV.SettingsPath.F4_Forbidden_text,
-            str.lower
         )
 
         r['Li_Class_Replace'] = self.load_list_from_file(
@@ -460,6 +475,7 @@ class SettingsLoader:
 def get_config_values(SV: SettingsValues):
     cur_dir = Path.cwd()
     script_dir = Path(appdirs.user_config_dir('Text_grabber', appauthor=False, roaming=True))
+    Path.mkdir(script_dir, exist_ok=True)
     os.chdir(script_dir)
     loader = SettingsLoader(config_path=SV.SettingsPath.General_settings_path, SV=SV)
 
@@ -482,8 +498,32 @@ def get_config_values(SV: SettingsValues):
     os.chdir(cur_dir)
 
 
+def updating_settings():
+    if SVV.tags_left_spacing not in SVV.tags_left_spacing_dict:
+        SVV.set('tags_left_spacing', 'tab')
+
+    SVV.set('Tkey_system_on', False)
+
+
+    for string in SVV.no_text_check_label_list:
+        """
+        'label.slateref',
+        'text.slateref',
+        'customletterlabel.slateref',
+        'customlettertext.slateref',
+        """
+        if string not in SVV.Tags_to_extraction:
+            SVV.Tags_to_extraction.append(string)
+
+
+
+
+
 print('Settings module')
 SVV = SettingsValues()
 get_config_values(SVV)
+updating_settings()
+print('Settings updated')
+
 
 

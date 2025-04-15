@@ -421,7 +421,7 @@ def add_missing_verbs_if_verbClass(Def: ET.Element):
     VerbClass"""
     verbs = Def.find("verbs")
     if verbs is not None:
-        for li in verbs:
+        for idx, li in enumerate(verbs):
             if not (li.tag.isdigit() or li.tag == "li"):
                 continue
 
@@ -435,12 +435,31 @@ def add_missing_verbs_if_verbClass(Def: ET.Element):
                 if vc_label is None:
                     """Add QM_String21MHG.verbs.(Verb_Class).label"""
                     verb_verbclass = ET.SubElement(verbs, verb_Class.text)
-                    verb_verbclass_label = ET.SubElement(verb_verbclass, 'label')
-                    verb_verbclass_label.text = "ㅤ"  # Пустой символ
-            else:
+                    ET.SubElement(verb_verbclass, 'label').text = "ㅤ"  # Пустой символ
 
-                li_label = ET.SubElement(li, 'label')
-                li_label.text = "ㅤ"  # Пустой символ
+            else:
+                ET.SubElement(li, 'label').text = "ㅤ"    # Пустой символ
+
+            if idx == 0:
+                if li_label is not None:
+                    if li_label.text is not None:
+                        match li_label.text:
+                            case 'ㅤ':
+                                ...
+                            case 'Gun':
+                                li_label.text = ''
+
+                            case s if s.islower():
+                                ...
+
+                            case s if ' ' not in s:
+                                li_label.text = ''
+
+                            case _:
+                                ...
+
+
+
 
 
 def ThingDef_add_strings(elem: ET.Element):
@@ -739,6 +758,113 @@ def find_defname(child_: ET.Element):
     defname_tag = defName_elem.text.replace(" ", "_")
     return defname_tag
 
+
+def QuestScript_def_(QuestScriptDef: ET.Element):
+
+    def quest_node_sequence(sequence_elem: ET.Element):
+        @dataclass
+        class Elem_count:
+            first_elem: ET.Element
+            count: int
+            is_modified = False
+
+            def make_zero(self):
+                if not self.is_modified:
+                    self.first_elem.tag += '-0'
+                    self.is_modified = True
+
+
+        tagname_dict: {str, type(Elem_count)} = {}
+        nodes = sequence_elem.find('nodes')
+        if nodes is None:
+            return
+        for idx, li in enumerate(nodes):
+            if 'Class' not in li.attrib:
+                li.tag = str(idx)
+                continue
+
+            class_name = li.attrib['Class']
+            match class_name:
+                case str(text) if '.' in text:
+                    li.tag = str(idx)
+                    continue
+                case 'QuestNode_SubScript':
+                    li.tag = str(idx)
+                    continue
+
+                case 'QuestNode_Signal':
+                    inSignal = li.find('inSignal')
+                    if inSignal is not None:
+                        inSignaltext = inSignal.text
+                        if inSignaltext is not None and inSignaltext and not inSignaltext.startswith('$'):
+                            li.tag = inSignaltext.replace('.', '')
+                            continue
+
+                        else:
+                            li.tag = str(idx)
+                            continue
+                    else:
+                        li.tag = str(idx)
+                        continue
+
+                case 'QuestNode_Set':
+                    name = li.find('name')
+                    if name is not None:
+                        name.clear()
+                    value = li.find('value')
+                    if value is not None:
+                        value.clear()
+                    li.tag = str(idx)
+                    continue
+
+                case _:
+                    ...
+
+
+            tag_name = class_name.split('QuestNode_')[-1]
+            if len(tag_name) < 2:
+                li.tag = str(idx)
+                continue
+            if tagname_dict.get(tag_name, None) is not None:
+                tagname_dict[tag_name].count += 1
+                tagname_dict[tag_name].make_zero()
+                li.tag = tag_name + '-' + str(tagname_dict[tag_name].count)
+
+            else:
+                tagname_dict[tag_name] = Elem_count(li, 0)
+                li.tag = tag_name
+
+
+
+    def makeSlateRef(el: ET.Element):
+        textList = [el.find('label'), el.find('text'), el.find('customLetterLabel'), el.find('customLetterText')]
+
+        for l in textList:
+            if l is not None:
+                l.tag = l.tag + '.slateRef'
+
+                # text = l.text
+                # tag = l.tag
+                # if text and tag:
+                    # l.clear()
+                    # ET.SubElement(l, 'slateRef').text = text
+
+
+
+
+    # ET.dump(QuestScriptDef)
+    for elem in QuestScriptDef.iter():
+        if elem.get("Class") == "QuestNode_Sequence":
+            quest_node_sequence(elem)
+        makeSlateRef(elem)
+
+
+    # ET.dump(QuestScriptDef)
+
+
+
+
+
 def elem_tag_check(elem):
     if elem.tag == "AlienRace.ThingDef_AlienRace":
         elem.tag = elem.tag.replace('AlienRace.ThingDef_AlienRace', 'ThingDef')
@@ -775,6 +901,7 @@ def elem_tag_check(elem):
     if elem_tag == "TraitDef":
         TraitDef_add_strings(elem)
     if elem_tag == "QuestScriptDef":
+        QuestScript_def_(elem)
         if S.Tkey_system_on:
             Tkey_system_QuestScriptDef(elem)
     if elem_tag == "XmlExtensions.SettingsMenuDef":
@@ -794,21 +921,34 @@ def adding_in_string(folder: str, defname: str, path_list: list[str], elem: ET.E
 
     def return_none():
 
+
+
         if defname is None:
             return None
 
         if match(r"\d", defname):
+            print('Skip: Defname start with digit - that cause XML error', defname)
+
             Error_log.append(f"Defname start with digit - that cause XML error: {folder, defname, path_list}")
             return None
 
 
         for tes in tag_endwith_skip:
             if finished_path.endswith(tes):
+
+                print('Skip: endwith path - "', tes, '" in ', tag_endwith_skip)
                 return None
 
         for tss in text_startwith_skip:
             if match(tss, text1):
+                print('Skip: startwith path - "', tss, '" in', text_startwith_skip)
+
                 return None
+
+        if elem.text in S.Forbidden_text:
+            print('Skip: Forbidden text - "', elem.text, '" in', S.Forbidden_text)
+
+            return None
 
         return 1
 
@@ -820,7 +960,7 @@ def adding_in_string(folder: str, defname: str, path_list: list[str], elem: ET.E
     # print('text1', child_.text)
 
 
-    text1 = elem.text # type: str
+    text1: str = elem.text
     text1 = html.escape(text1, quote=False)
     text1 = text1.replace("li&gt;", "li>")
     text1 = text1.replace("&lt;li", "<li")
@@ -840,18 +980,26 @@ def adding_in_string(folder: str, defname: str, path_list: list[str], elem: ET.E
         ExitList.fdpt.append(FolderDefnamePathText(folder, defname, finished_path, text1))
         return None
 
+    if elem.tag in S.no_text_check_label_list:
+        ExitList.fdpt.append(FolderDefnamePathText(folder, defname, finished_path, text1))
+
+
+    for fp in S.Forbidden_part_of_tag:
+        if fp in elem.tag:
+
+            return None
 
 
     if "_" in text1:
         if " " not in text1:
             if elem.tag in S.Tags_to_extraction:
                 ExitList.fdpt.append(FolderDefnamePathText(folder, defname, finished_path, text1))
+
+            print('Skip: Has "_ underscore" and no spaces "', text1)
             return None
 
 
-    for fp in S.Forbidden_part_of_tag:
-        if fp in elem.tag:
-            return None
+
 
     ExitList.fdpt.append(FolderDefnamePathText(folder, defname, finished_path, text1))
 
@@ -875,6 +1023,8 @@ def first_launch(root_Def: ET.Element):
 
     def no_child(folder, defname, path_list, elem):
         """Output elem"""
+
+
         if elem.tag.lower() in S.Forbidden_tag:
             return
         if S.Check_at_least_one_letter_in_text and not any(c.isalpha() for c in elem.text):  # Проверка хоть одной буквы

@@ -1,9 +1,16 @@
 Update log
 
+
+    TODO: Поправить loadfolder Добавляется точка вместо слеша тут F:\Games\steamapps\workshop\content\294100\2478833213
+    TODO: Поправить loadfolder Остается 1.5 когда не нужна F:\Games\steamapps\workshop\content\294100\2478833213
+    TODO: Поправить loadfolder например в F:\Games\steamapps\workshop\content\294100\2196278117
+
     TODO: Проверить Li_Class_Replace
-    TODO: Проверить SettingsValues.Adding_xml_version_encoding_string
-	TODO: add adding strings into settings. What is it?
-	TODO: fix same patches (in different folders) grabbing
+
+Update 1.4.2
+    Bugfixes
+    Rewritten QuestScriptDef grabbing
+
 
 
 Update 1.4.1

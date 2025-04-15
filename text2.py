@@ -22,7 +22,7 @@ class SearchClass:
 
 sc = SearchClass({})
 
-def parent_folders(Mod_folder: Path | None, Another_folder: Path | None):
+def parent_folders(Mod_folder: str | None, Another_folder: str | None):
 
     def searching_packageIds(failed_steam_id):
         """Searching mod dep by id"""
@@ -30,14 +30,16 @@ def parent_folders(Mod_folder: Path | None, Another_folder: Path | None):
         if failed_steam_id:
             print(f"Fail find steamID '{failed_steam_id}'. Try find by packageId")
             print(f"Search by packageId finished")
-        for f in Another_folder.iterdir():  # type: Path
+        if Another_folder is None:
+            return
+        for f in Path(Another_folder).iterdir():
             if not f.is_dir():
                 continue
             if (f / 'About' / 'About.xml').exists():
                 with open(f / 'About' / 'About.xml', 'r', encoding="utf-8") as lf:
                     tree = etree.parse(lf)
                 root = tree.getroot()
-                for el in root:  # type: etree.Element
+                for el in root:
                     if el.tag.lower() == 'packageid':
                         sc.another_fold_ids[el.tag.lower] = f
                         continue

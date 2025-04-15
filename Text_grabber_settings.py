@@ -2,12 +2,15 @@ import gettext
 import os
 import shutil
 import tkinter as tk
+from ctypes import windll
 from pathlib import Path
 from tkinter import PhotoImage
 from tkinter import filedialog
 from tkinter.ttk import Labelframe
 
 import ttkbootstrap as ttk
+import win32con
+import win32gui
 from ttkbootstrap import Frame
 from ttkbootstrap.dialogs.dialogs import Messagebox
 from ttkbootstrap.tooltip import ToolTip
@@ -238,19 +241,22 @@ class GeneralFrame(Frame):
 
             def Select_Data_Path():
                 a = filedialog.askdirectory(title=_("Select Data folder"))
-                if not a:
+                if a == '':
                     SV.Path_to_Data = None
-
                     f1.Label['text'] = _("Rimworld Data:\nNone")
                     Messagebox.show_warning(message=_('Folder Not selected'), parent=self.app, position=(300, 300))
-                    return
-                path = Path(a)
-                if path.name != 'Data':
-                    SV.Path_to_Data = None
-                    f1.Label['text'] = _("Rimworld Data:\nNone")
-                    Messagebox.show_warning(message=_('Folder Not selected - Selected path is not Data folder'), parent=self.app, position=(300, 300))
-                    return
-                SV.Path_to_Data = str(path) if path else None
+                    SV.set('Path_to_Data', SV.Path_to_Data)
+                    f1.Label['text'] = _("Rimworld Data:\n{Path_to_Data}").format(Path_to_Data=SV.Path_to_Data)
+                else:
+                    path = Path(a)
+                    if path.name != 'Data':
+                        SV.Path_to_Data = None
+                        f1.Label['text'] = _("Rimworld Data:\nNone")
+                        Messagebox.show_warning(message=_('Folder Not selected - Selected path is not Data folder'), parent=self.app, position=(300, 300))
+                        SV.set('Path_to_Data', SV.Path_to_Data)
+                        f1.Label['text'] = _("Rimworld Data:\n{Path_to_Data}").format(Path_to_Data=SV.Path_to_Data)
+
+                SV.Path_to_Data = str(Path(a))
                 SV.set('Path_to_Data', SV.Path_to_Data)
                 f1.Label['text'] = _("Rimworld Data:\n{Path_to_Data}").format(Path_to_Data=SV.Path_to_Data)
 
@@ -268,8 +274,10 @@ class GeneralFrame(Frame):
 
             def Select_Mod_Path():
                 a = filedialog.askdirectory(title=_("Select MOD folder"))
-                SV.Path_to_Mod_folder = str(Path(a)) if a else None
-                SV.set('Path_to_Mod_folder', SV.Path_to_Mod_folder)
+                if a == '':
+                    SV.set('Path_to_Mod_folder', None)
+                else:
+                    SV.set('Path_to_Mod_folder', str(Path(a)))
 
                 f2.Label['text'] = _(
                     "Rimworld Mods Folder:\n{Path_to_Mod_folder}").format(Path_to_Mod_folder=SV.Path_to_Mod_folder)
@@ -285,8 +293,10 @@ class GeneralFrame(Frame):
 
             def Select_Another_Path():
                 a = filedialog.askdirectory(title=_("Select Another mod folder"))
-                SV.Path_to_Another_folder = str(Path(a)) if a else None
-                SV.set('Path_to_Another_folder', SV.Path_to_Another_folder)
+                if a == '':
+                    SV.set('Path_to_Another_folder', None)
+                else:
+                    SV.set('Path_to_Another_folder', str(Path(a)))
 
                 f3.Label['text'] = _(
                     "Another Rimworld Mods Folder:\n{Path_to_Another_folder}").format(Path_to_Another_folder=SV.Path_to_Another_folder)
@@ -373,14 +383,14 @@ class GeneralFrame(Frame):
                            ).pack(anchor=tk.W, pady=(10, 0))
 
         def only_russian():
-            FF = ttk.Labelframe(self, text=_("Only for Russian"))
+            FF = ttk.Labelframe(self, text=_("Russian language"))
             FF.pack(anchor=tk.N, side=tk.LEFT, padx=(5, 0))
 
             F1 = ttk.Frame(FF, padding=10)
             F1.pack()
 
             NewCheckButton(F1,
-                           _("Translate some ThingDef.comps.tools and death messages into russian"),
+                           _("tools and death messages into russian"),
                            SV.Translate_tools_into_russian,
                            'Translate_tools_into_russian',
                            tooltip_text=_('Translate stock->ложe, barrel->ствол, acid fangs->кислотные клыки и т.п.'
@@ -1313,9 +1323,11 @@ class TestApp(ttk.Toplevel):
 
     def __init__(self, master: ttk.Window):
         self.master: ttk.Window = master
-        super().__init__(master=master)
+        super().__init__(master=master, title='Settings')
 
         self.overrideredirect(True)
+        # self.attributes('-topmost', True)
+
         self.style.theme_use('darkly')
         self.protocol("WM_DELETE_WINDOW", self.exit_app)
         self.geometry("1000x800+200+200")
@@ -1390,7 +1402,23 @@ class TestApp(ttk.Toplevel):
 def run_from_main_prog(master: ttk.Window):
 
     master.withdraw()
-    TestApp(master=master)
+    a = TestApp(master=master,)
+
+    def set_appwindow(root):
+
+        hwnd = windll.user32.GetParent(root.winfo_id())
+        hicon = win32gui.LoadImage(None, 'Images\\icons8-text-67.ico', win32con.IMAGE_ICON, 0, 0,
+                                   win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTSIZE)
+        win32gui.SendMessage(hwnd, win32con.WM_SETICON, win32con.ICON_BIG, hicon)
+        win32gui.SendMessage(hwnd, win32con.WM_SETICON, win32con.ICON_SMALL, hicon)
+        win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE,
+                               win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE) | win32con.WS_EX_APPWINDOW)
+
+        root.wm_withdraw()
+        root.after(10, lambda: root.wm_deiconify())
+        windll.user32.SetForegroundWindow(hwnd)
+    a.after(10, lambda: set_appwindow(root=a))
+
     master.mainloop()
 
 

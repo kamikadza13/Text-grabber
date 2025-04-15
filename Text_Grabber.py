@@ -46,7 +46,7 @@ from text2 import add_elts_from_par
 from text2 import find_parents_in_list_of_pathes
 from text2 import parent_folders
 
-Version_of_Text_grabber = "1.4.1"
+Version_of_Text_grabber = "1.4.2"
 Last_Rimworld_version = "1.5"
 
 global exitString
@@ -435,7 +435,7 @@ def patches():
                 li_elem = f'<li>From_patches/No mods required</li>\n\t\t'
                 if li_elem not in state.new_loadfolder_pathes:
                     state.new_loadfolder_pathes.append(li_elem)
-                new_name = file.stem / str(patches_file_count) / file.suffix
+                new_name = str(file.stem) + str(patches_file_count) + str(file.suffix)
                 patches_file_count += 1
                 new_path = path / new_name
                 with open(new_path, "w", encoding="utf-8") as new_patch_file:
@@ -609,11 +609,11 @@ def main(Inputed_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
     Floodgauge['value'] = 20
 
     printy("Finding defs in parents", 'n')
-    parent_mod_pathes_dict = parent_folders(Path(S.Path_to_Mod_folder), Path(S.Path_to_Another_folder))
+    parent_mod_pathes_dict = parent_folders(S.Path_to_Mod_folder, S.Path_to_Another_folder)
     """{ PackageID : Path }"""
-
-    for mod_path in parent_mod_pathes_dict.values():
-        parent_xml_pathes.extend([a for a in mod_path.rglob('*.xml') if 'Defs' in a.parts])
+    if parent_mod_pathes_dict:
+        for mod_path in parent_mod_pathes_dict.values():
+            parent_xml_pathes.extend([a for a in mod_path.rglob('*.xml') if 'Defs' in a.parts])
     printy("Finding defs in parents... Done ", 'n')
     print()
 
@@ -877,18 +877,32 @@ def main(Inputed_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
     # raise Exception
 
-    def delete_empty_folders(root3):
-        deleted = set()
-        for current_dir, subdirs2, files2 in os.walk(root3, topdown=False):
-            still_has_subdirs = any(subdir for subdir in subdirs2 if os.path.join(current_dir, subdir) not in deleted)
-            if not any(files2) and not still_has_subdirs:
-                os.rmdir(current_dir)
-                deleted.add(current_dir)
+    def remove_empty_folders(path):
+        """Рекурсивно удаляет все пустые папки, начиная с указанного пути."""
+        if not os.path.isdir(path):
+            return False  # Если это не папка, пропускаем
 
-        return deleted
+        # Получаем список всех элементов в папке
+        entries = os.listdir(path)
+
+        # Рекурсивно проверяем все подпапки
+        has_non_empty = False
+        for entry in entries:
+            full_path = os.path.join(path, entry)
+            if os.path.isdir(full_path):
+                if remove_empty_folders(full_path):  # Если подпапка не пуста
+                    has_non_empty = True
+
+        # Если папка пуста, удаляем её
+        if not has_non_empty and not entries:
+            print(f"Удаление пустой папки: {path}")
+            os.rmdir(path)
+            return False
+        return True  # Папка не пуста
+
 
     try:
-        delete_empty_folders(root2)
+        remove_empty_folders(root2)
     except Exception as ex:
         printy(r'[r]\[ERROR\]@ delete_empty_folders', predefined='<m')
         Error_log.append(f"Error delete_empty_folders {ex} \n\n")
@@ -915,152 +929,6 @@ def main(Inputed_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
             print()
             Error_log.append(f"Error Delete_old_versions_translation {ex} \n\n")
 
-    def loadfolder_check_folders():
-        """
-        Проверка loadFolders на наличие папок
-        """
-
-        def exist():
-            printy("Loadfolder.xml remove empty folders...", 'n')
-
-            with open('loadFolders.xml', 'r', encoding="utf-8") as xml_file:
-                tree1 = ET.parse(xml_file)
-            root1 = tree1.getroot()
-            max_v = "1.0"
-
-            if state.new_loadfolder_pathes:
-                printy("\t[o>]Add patches_defs_folders into Loadfolder@")
-                print("\t\t", end='')
-                for lf in state.new_loadfolder_pathes:
-                    printy(escape_printy_string(lf), "o", end="")
-                for vv in root1:
-                    vv[-1].tail = '\n\t\t'
-                    for lii in state.new_loadfolder_pathes:
-                        el = ET.fromstring(lii)
-                        el.tail = '\n\t\t'
-                        vv.append(el)
-                    else:
-                        vv[-1].tail = "\n\t"
-
-
-            for v in root1:
-                try:
-                    v_cur = v.tag.replace('v', '')  # "v1.5 -> 1.5"
-                except Exception as ex:
-                    print("Bad Loadfolder version - > Check loadfolder.xml")
-                    v_cur = "1.0"
-                if max_v < v_cur:
-                    max_v = v_cur
-
-            printy(f'   Max version [r]{escape_printy_string(max_v)}@')
-
-
-            for v in reversed(root1):
-                v_cur = v.tag[1:]
-                for li in reversed(v):
-                    if li.text == str(v.tag[1:]):
-                        if S.Delete_old_versions_translation:
-                            li.text = str(max_v)
-                    if li.text == "/":
-                        pass
-                    elif li.text is not None:
-                        try:
-                            if S.Delete_old_versions_translation:
-                                if v_cur == li.text.partition("\\")[0]:
-                                    li.text = li.text.replace(str(v_cur), str(max_v))
-                        except ValueError:
-                            pass
-                        if not file_exists("_Translation\\" + li.text):
-                            # printy(f"   Not need folder [<y]{escape_printy_string(li.text)}@ --> Removing")
-                            v.remove(li)
-
-            def is_li_empty(li):
-                return li.text is None or li.text.strip() == ''
-
-            # Поиск и удаление всех пустых элементов <li>
-            remove_li_list = []
-            for v in root1:
-                for li in v:
-                    if is_li_empty(li):
-                        print('Пустой ли')
-                        remove_li_list.append((v,li))
-            for v, li in remove_li_list:
-                v.remove(li)
-
-            tree1.write('_Translation\\loadFolders.xml')
-
-            def check_necessity_loadfolder():
-                with open('_Translation\\loadFolders.xml', 'r', encoding="utf-8") as xml_file:
-                    tree1 = ET.parse(xml_file)
-                root1 = tree1.getroot()
-                for v in reversed(root1):
-                    for li in reversed(v):
-                        if li.text != "/":
-                            # print("Check another path:", str(max_v), li.text)
-                            if not str(max_v) == li.text:
-                                # print('another_path = True -> not delete LoadFolder')
-                                printy("Loadfolder.xml remove empty folders... Done", 'n')
-                                print()
-                                return
-                if file_exists('_Translation\\loadFolders.xml'):
-                    os.remove(f"_Translation\\loadFolders.xml")
-                    printy("Loadfolder.xml remove empty folders... Done --> [r]Loadfolder.xml not needed.@",
-                           predefined='n')
-                    print()
-
-            check_necessity_loadfolder()
-
-        if file_exists('LoadFolders.xml'):
-            exist()
-
-
-
-        else:
-            if state.new_loadfolder_pathes:
-                printy("Loadfolder.xml creating for patches...", 'n')
-                printy("\t[o>]Add patches_defs_folders into Loadfolder@")
-
-                printy("\t\t", end='')
-                for lf in state.new_loadfolder_pathes:
-                    printy(escape_printy_string(lf), "o")
-
-                loadFolders = ET.Element('loadFolders')
-                loadFolders.text = "\n\t"
-
-                vers = ET.SubElement(loadFolders, tag=mod_data.max_version)
-                vers.text = '\n\t\t'
-                vers.tail = "\n"
-
-                # print('Seach folders:', seach_folders)
-                for s_f in folders.searching_pathes:
-                    if s_f == '/' or file_exists(os.path.join("_Translation", s_f)):
-                        if not s_f:
-                            li = ET.SubElement(vers, "li")
-                            li.text = "/"
-                            li.tail = "\n\t\t"
-                        else:
-                            li = ET.SubElement(vers, "li")
-                            li.text = str(s_f)
-                            li.tail = "\n\t\t"
-                for s_f in state.new_loadfolder_pathes:
-                    li = ET.fromstring(s_f)
-                    li.tail = "\n\t\t"
-                    vers.append(li)
-                vers[-1].tail = "\n\t"
-
-
-                with open(f"_Translation\\LoadFolders.xml", "wb") as fff:
-                    fff.write(ET.tostring(loadFolders, encoding="utf-8"))
-                printy("Loadfolder.xml creating for patches...Done", 'n')
-
-                # print("Add patches_defs_folders into Loadfolder")
-                # for vv in root1:
-                #     for lii in state.loadfolder_folders_to_add:
-                #         el = ET.fromstring(lii)
-                #         el.tail = '\n\t\t'
-                #         vv.append(el)
-                #     else:
-                #         vv[-1].tail = "\n\t"
 
     if S.Merge_folders:
         printy("Merge folders", 'n')
@@ -1251,10 +1119,163 @@ def main(Inputed_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                             S.Preview_Position,
                             S.Preview_Offset_x, S.Preview_Offset_y)
 
+    try:
+        remove_empty_folders(root2)
+    except Exception as ex:
+        Error_log.append(f"Error delete_empty_folders {ex} \n\n")
+        printy(fr"[r]\[ERROR\]@ delete_empty_folders {escape_printy_string(str(ex))} \n\n", predefined='<m')
+
+
+
+    def loadfolder_check_folders():
+        """
+        Проверка loadFolders на наличие папок
+        """
+
+        def exist():
+            printy("Loadfolder.xml remove empty folders...", 'n')
+
+            with open('loadFolders.xml', 'r', encoding="utf-8") as xml_file:
+                tree1 = ET.parse(xml_file)
+            root1 = tree1.getroot()
+            max_v = "1.0"
+
+            if state.new_loadfolder_pathes:
+                printy("\t[o>]Add patches_defs_folders into Loadfolder@")
+                print("\t\t", end='')
+                for lf in state.new_loadfolder_pathes:
+                    printy(escape_printy_string(lf), "o", end="")
+                for vv in root1:
+                    vv[-1].tail = '\n\t\t'
+                    for lii in state.new_loadfolder_pathes:
+                        el = ET.fromstring(lii)
+                        el.tail = '\n\t\t'
+                        vv.append(el)
+                    else:
+                        vv[-1].tail = "\n\t"
+
+
+            for v in root1:
+                try:
+                    v_cur = v.tag.replace('v', '')  # "v1.5 -> 1.5"
+                except Exception as ex:
+                    print("Bad Loadfolder version - > Check loadfolder.xml")
+                    v_cur = "1.0"
+                if max_v < v_cur:
+                    max_v = v_cur
+
+            printy(f'   Max version [r]{escape_printy_string(max_v)}@')
+
+
+            for v in reversed(root1):
+                v_cur = v.tag[1:]
+                for li in reversed(v):
+                    if li.text == str(v.tag[1:]):
+                        if S.Delete_old_versions_translation:
+                            li.text = str(max_v)
+                    if li.text == "/":
+                        pass
+                    elif li.text is not None:
+                        try:
+
+                            if S.Delete_old_versions_translation:
+                                if v_cur == li.text.partition("\\")[0]:
+                                    li.text = li.text.replace(str(v_cur), str(max_v))
+                        except ValueError:
+                            pass
+                        if not file_exists("_Translation\\" + li.text):
+                            # printy(f"   Not need folder [<y]{escape_printy_string(li.text)}@ --> Removing")
+                            v.remove(li)
+
+            def is_li_empty(li):
+                return li.text is None or li.text.strip() == ''
+
+            # Поиск и удаление всех пустых элементов <li>
+            remove_li_list = []
+            for v in root1:
+                for li in v:
+
+                    if is_li_empty(li):
+                        print('Пустой ли')
+                        remove_li_list.append((v,li))
+            for v, li in remove_li_list:
+                v.remove(li)
+
+            tree1.write('_Translation\\loadFolders.xml')
+
+            def check_necessity_loadfolder():
+                with open('_Translation\\loadFolders.xml', 'r', encoding="utf-8") as xml_file:
+                    tree1 = ET.parse(xml_file)
+                root1 = tree1.getroot()
+                for v in reversed(root1):
+                    for li in reversed(v):
+                        if li.text != "/":
+                            # print("Check another path:", str(max_v), li.text)
+                            if not str(max_v) == li.text:
+                                # print('another_path = True -> not delete LoadFolder')
+                                printy("Loadfolder.xml remove empty folders... Done", 'n')
+                                print()
+                                return
+                if file_exists('_Translation\\loadFolders.xml'):
+                    os.remove(f"_Translation\\loadFolders.xml")
+                    printy("Loadfolder.xml remove empty folders... Done --> [r]Loadfolder.xml not needed.@",
+                           predefined='n')
+                    print()
+
+            check_necessity_loadfolder()
+
+        if file_exists('LoadFolders.xml'):
+            exist()
+
+
+
+        else:
+            if state.new_loadfolder_pathes:
+                printy("Loadfolder.xml creating for patches...", 'n')
+                printy("\t[o>]Add patches_defs_folders into Loadfolder@")
+
+                printy("\t\t", end='')
+                for lf in state.new_loadfolder_pathes:
+                    printy(escape_printy_string(lf), "o")
+
+                loadFolders = ET.Element('loadFolders')
+                loadFolders.text = "\n\t"
+
+                vers = ET.SubElement(loadFolders, mod_data.max_version)
+                vers.text = '\n\t\t'
+                vers.tail = "\n"
+
+                # print('Seach folders:', seach_folders)
+                for s_f in folders.searching_pathes:
+                    if (Path("_Translation") / s_f).exists():
+                        li = ET.SubElement(vers, "li")
+                        li.text = str(s_f) if str(s_f) != '.' else '/'
+                        li.tail = "\n\t\t"
+                for s_f in state.new_loadfolder_pathes:
+                    li = ET.fromstring(s_f)
+                    li.tail = "\n\t\t"
+                    vers.append(li)
+                vers[-1].tail = "\n\t"
+
+
+                with open(f"_Translation\\LoadFolders.xml", "wb") as fff:
+                    fff.write(ET.tostring(loadFolders, encoding="utf-8"))
+                printy("Loadfolder.xml creating for patches...Done", 'n')
+
+                # print("Add patches_defs_folders into Loadfolder")
+                # for vv in root1:
+                #     for lii in state.loadfolder_folders_to_add:
+                #         el = ET.fromstring(lii)
+                #         el.tail = '\n\t\t'
+                #         vv.append(el)
+                #     else:
+                #         vv[-1].tail = "\n\t"
+
+
     loadfolder_check_folders()
 
     try:
-        delete_empty_folders(root2)
+        remove_empty_folders(root2)
     except Exception as ex:
         Error_log.append(f"Error delete_empty_folders {ex} \n\n")
         printy(fr"[r]\[ERROR\]@ delete_empty_folders {escape_printy_string(str(ex))} \n\n", predefined='<m')
@@ -1651,7 +1672,14 @@ if __name__ == '__main__':
     Window_Text_grabber.mainloop()
 
 '''
-pyinstaller --noconfirm Text_Grabber.spec
 pyinstaller Text_Grabber.spec
 
+
+
+
+pyinstaller --noconfirm Text_Grabber.spec
+Copy-Item -Path Images -Destination dist/Text_Grabber -Recurse
+Copy-Item -Path locale -Destination dist/Text_Grabber -Recurse
+Copy-Item -Path db.json -Destination dist/Text_Grabber
+Compress-Archive -Path "dist/Text_Grabber" -DestinationPath "dist/Text_Grabber.zip" -update
 '''
