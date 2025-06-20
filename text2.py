@@ -1,7 +1,9 @@
 import copy
 from dataclasses import dataclass
 from pathlib import Path
+from typing import List, Dict
 from xml.etree import ElementTree as et
+from xml.etree.ElementTree import Element
 
 from lxml import etree
 
@@ -82,43 +84,85 @@ def parent_folders(Mod_folder: str | None, Another_folder: str | None):
 
 
 
-def adding_elems(current_elem_root: et.Element, parent_elem_root: et.Element, modify_original=False):
+def adding_elems(current_elem_root: et.Element, parent_elem_root: et.Element, DEBUG_current_element=False, modify_original=False):
 
     result_elem = current_elem_root if modify_original else copy.deepcopy(current_elem_root)
 
+
+    #   Если в элементе есть атрибут "Inherit", то он ничего не наследует
     if current_elem_root.get('Inherit') == 'False':
         return result_elem
 
-    # Словарь для группировки дочерних элементов по тегам
-    children_by_tag = {}
-    for child in result_elem:
-        children_by_tag.setdefault(child.tag, []).append(child)
 
-    # Обрабатываем элементы из второго элемента
-    for parent_elem_child in parent_elem_root:
-    # for parent_elem_child in parent_elem_root.iterchildren():
-        # Проверяем атрибут Inherit
-        if parent_elem_child.get('Inherit') == 'False':
-            continue
-        # Создаем копию для безопасного использования
-        new_child = copy.deepcopy(parent_elem_child)
-        new_child.attrib.pop('Inherit', None)  # Удаляем атрибут Inherit если есть
 
-        # Поиск соответствующего элемента в первом
-        existing_children = children_by_tag.get(new_child.tag, [])
+    #   Добавлять будем к элементам родителя.
 
-        if existing_children:
-            # Объединяем детей: сначала новые, потом существующие
-            existing = existing_children[0]
-            merged_children = list(new_child) + list(existing)
-            existing.clear()  # Удаляем старых детей
-            for child in merged_children:
-                existing.append(child)
+    elems_by_tags: Dict[str, List[Element]] = {}
+
+
+
+    for e in parent_elem_root:
+        if not elems_by_tags.get(e.tag):
+            elems_by_tags[e.tag] = [copy.deepcopy(e)]
         else:
-            # Добавляем новый элемент в начало
-            result_elem.insert(0, new_child)
-            # Обновляем словарь
-            children_by_tag.setdefault(new_child.tag, []).insert(0, new_child)
+            elems_by_tags[e.tag].append(copy.deepcopy(e))
+
+
+
+    if DEBUG_current_element:
+
+        print("Current elem:")
+        et.dump(result_elem)
+
+        print("Parent elem:")
+        et.dump(parent_elem_root)
+
+        print(elems_by_tags.keys())
+        comps = elems_by_tags.get('comps')
+        if comps:
+            print('Parent Comps:')
+            for a in comps[0]:
+                et.dump(a)
+
+
+    for e in result_elem:
+
+        if e.get('Inherit') == 'False':
+            continue
+
+        if e.tag not in elems_by_tags:
+            elems_by_tags[e.tag] = [e]
+        else:
+            #   Элемент есть в родителе
+            #   Нужно проверить есть ли <li> в элементе, если так, то доавлять к родительским
+            if list(e) and all(ch.tag == 'li' for ch in e):   #   Все дети ли
+
+                for li in e:
+                    for idx, li_s in enumerate(elems_by_tags[e.tag][0]):
+
+                        if len(li.attrib) > 0 and li.attrib == li_s.attrib:
+                            if DEBUG_current_element:
+                                print('Replaced:')
+                                et.dump(li_s)
+                                et.dump(li)
+                            elems_by_tags[e.tag][0][idx] = li
+                            break
+                    else:
+                        elems_by_tags[e.tag][0].append(li)
+                continue
+            #   Элемент заменяем на новый
+            #   Если несколько с одинаковым тэгом, то заменяет первый.
+            elems_by_tags[e.tag][0] = e
+
+    result_elem.clear()
+    result_elem.text = '\n\t'
+
+    for elems in elems_by_tags.values():
+        for el in elems:
+            result_elem.append(el)
+
+    if list(result_elem):
+        result_elem[-1].tail = '\n'
 
     return result_elem
 
@@ -173,7 +217,7 @@ def find_parents_in_list_of_pathes(root_dir: list[Path]):
 
 
 
-                    new_elem = add_elts_from_par(elem, final_parent_dict[parent])
+                    new_elem = add_elts_from_par(elem, final_parent_dict[parent], )
                     final_parent_dict[name] = new_elem
                 else:
                     if parent not in curr_parent_dict:
@@ -222,26 +266,36 @@ def find_parents_in_list_of_pathes(root_dir: list[Path]):
 
     return final_parent_dict
 
-def add_elts_from_par(current_root: etree.Element, parent_root: etree.Element, change_current_bool=False):
+def add_elts_from_par(current_root: etree.Element, parent_root: etree.Element, DEBUG_current_element=False, change_current_bool=False, ):
     if type(current_root) is not type(parent_root):
         print(type(current_root))
         print(type(parent_root))
+
     # print('root elem:')
-    # etree.dump(parent)
+    # et.dump(parent_root)
     # print('child elem:')
-    # etree.dump(child)
+    # et.dump(current_root)
+
     try:
         if not len(parent_root):
             return current_root
         if not len(current_root):
             return parent_root
 
-        new_elem = adding_elems(current_root, parent_root, change_current_bool)
+        # if change_current_bool:
+        #     print("До:")
+        #     et.dump(current_root)
+
+        new_elem = adding_elems(current_root, parent_root, DEBUG_current_element=DEBUG_current_element, modify_original=change_current_bool,)
+        # if change_current_bool:
+        #     print("После:")
+        # et.dump(new_elem)
+
         return new_elem
     except Exception as ex:
-        print("Error add_elts_from_par")
-        etree.dump(parent_root)
-        etree.dump(current_root)
+        print("Error add_elts_from_parent")
+        et.dump(parent_root)
+        et.dump(current_root)
 
 
 

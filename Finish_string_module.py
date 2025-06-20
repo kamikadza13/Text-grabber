@@ -1,5 +1,6 @@
 import copy
 import html
+import re
 from dataclasses import dataclass
 from re import match
 # from xml import etree as ET
@@ -12,6 +13,8 @@ from Settings_module import SVV as S
 tag_endwith_skip = ['\\nodes\\Set\\name', ]
 text_startwith_skip = ['RGB', r'\$', ]
 ruleFiles_list = {}
+
+debug_print_bool = False
 
 def escape_printy_string(string):
     return p_escape(str(string))
@@ -219,7 +222,7 @@ def translate_ThingDef_tools(el1: ET.Element):
                     if t.tag == 'label':
                         match t.text.lower():
                             case "stock":
-                                t.text = "ложe"
+                                t.text = "приклад"
                             case "barrel":
                                 t.text = "ствол"
                             case "muzzle":
@@ -728,6 +731,8 @@ def XmlExtensions_SettingsMenuDef(elem: ET.Element):
 def ThingDef_MVCF_Comps_CompProperties_VerbProps(elem: ET.Element):
     comps = elem.find("comps")
     if comps is not None:
+
+
         for li in comps:
             compClass = li.find("compClass")
             if compClass is not None:
@@ -850,8 +855,6 @@ def QuestScript_def_(QuestScriptDef: ET.Element):
                     # ET.SubElement(l, 'slateRef').text = text
 
 
-
-
     # ET.dump(QuestScriptDef)
     for elem in QuestScriptDef.iter():
         if elem.get("Class") == "QuestNode_Sequence":
@@ -862,7 +865,11 @@ def QuestScript_def_(QuestScriptDef: ET.Element):
     # ET.dump(QuestScriptDef)
 
 
-
+def CombatExtended_AmmoDef(ThingDef: ET.Element):
+    ...
+    #
+    # if ThingDef.get('Class') == 'CombatExtended.AmmoDef':
+    #     ThingDef.tag = AmmoDef
 
 
 def elem_tag_check(elem):
@@ -880,6 +887,7 @@ def elem_tag_check(elem):
     if elem_tag == "DamageDef":
         DamageDef_add_strings(elem)
     if elem_tag == "ThingDef":
+        CombatExtended_AmmoDef(elem)
         # comps_Li_Class_Replace(elem) # Moved to replace_child_li -> li_new_tag_by_child
         add_missing_verbs_if_verbClass(elem)
         ThingDef_add_strings(elem)
@@ -903,12 +911,22 @@ def elem_tag_check(elem):
     if elem_tag == "QuestScriptDef":
         QuestScript_def_(elem)
         if S.Tkey_system_on:
+            print("TKEY_ON!!!!!!!!!!!!!!!!!!!!!!!")
             Tkey_system_QuestScriptDef(elem)
     if elem_tag == "XmlExtensions.SettingsMenuDef":
         XmlExtensions_SettingsMenuDef(elem)
 
 def adding_in_string(folder: str, defname: str, path_list: list[str], elem: ET.Element, print_now: bool = False):
 
+
+    def debug_print():
+        print('folder:', folder, '| defname:', defname)
+        print('tag:', elem.tag, '| text:', elem.text)
+
+    if debug_print_bool:
+        debug_print()
+
+    elemtag = elem.tag.lower()
 
     if not path_list:
         print('elem_path Пустой -> defname не найден')
@@ -980,19 +998,21 @@ def adding_in_string(folder: str, defname: str, path_list: list[str], elem: ET.E
         ExitList.fdpt.append(FolderDefnamePathText(folder, defname, finished_path, text1))
         return None
 
-    if elem.tag in S.no_text_check_label_list:
+    if elemtag in S.no_text_check_label_list:
         ExitList.fdpt.append(FolderDefnamePathText(folder, defname, finished_path, text1))
+        return None
 
-
+    # print(S.Forbidden_part_of_tag)
+    # print(elem.tag)
     for fp in S.Forbidden_part_of_tag:
-        if fp in elem.tag:
+        if fp in elemtag:
 
             return None
 
 
     if "_" in text1:
         if " " not in text1:
-            if elem.tag in S.Tags_to_extraction:
+            if elemtag in S.Tags_to_extraction:
                 ExitList.fdpt.append(FolderDefnamePathText(folder, defname, finished_path, text1))
 
             print('Skip: Has "_ underscore" and no spaces "', text1)
@@ -1004,6 +1024,68 @@ def adding_in_string(folder: str, defname: str, path_list: list[str], elem: ET.E
     ExitList.fdpt.append(FolderDefnamePathText(folder, defname, finished_path, text1))
 
 
+
+def dollar_variable_replace(elem: ET.Element):
+
+    root = elem
+
+    # Шаг 1: Поиск всех переменных в текстах элементов
+    variables_map = {}
+    pattern = re.compile(r'\$(\w+)')
+
+    # Рекурсивная функция для поиска элементов с переменными
+    def find_variables(elem):
+        # Обрабатываем только текст элементов (не атрибуты и не tail)
+        if elem.text and '$' in elem.text:
+            # Находим все переменные в тексте
+            matches = pattern.findall(elem.text)
+            if matches:
+                for var_name in matches:
+                    if var_name not in variables_map:
+                        variables_map[var_name] = []
+                    # Сохраняем ссылку на элемент и оригинальный текст
+                    variables_map[var_name].append((elem, elem.text))
+
+        # Рекурсивно обрабатываем дочерние элементы
+        for child in elem:
+            find_variables(child)
+
+    # Первоначальный проход для сбора всех переменных
+    find_variables(root)
+
+    # Шаг 2: Поиск значений переменных в QuestNode_Set
+    variable_values = {}
+
+    # Ищем все элементы QuestNode_Set
+    for node_set in root.findall(".//li[@Class='QuestNode_Set']"):
+        name_elem = node_set.find('name')
+        if name_elem is None or name_elem.text is None:
+            continue
+
+        var_name = name_elem.text.strip()
+
+        # Если эта переменная используется в текстах
+        if var_name in variables_map:
+            value_elem = node_set.find('value')
+            value = value_elem.text.strip() if value_elem is not None and value_elem.text is not None else ""
+            variable_values[var_name] = value
+
+    # Шаг 3: Замена переменных в элементах
+    for var_name, elements in variables_map.items():
+        if var_name not in variable_values:
+            continue  # Пропускаем если нет значения
+
+        value = variable_values[var_name]
+
+        for (elem, original_text) in elements:
+            # Заменяем все вхождения этой переменной
+            new_text = original_text.replace(f'${var_name}', value)
+
+            # Если текст изменился - обновляем элемент
+            if new_text != elem.text:
+                elem.text = new_text
+                if debug_print_bool:
+                    print("Replacing variable:", var_name, 'by', value)
 
 
 def first_launch(root_Def: ET.Element):
@@ -1038,9 +1120,13 @@ def first_launch(root_Def: ET.Element):
             adding_in_string(folder=folder, defname=defname, path_list=path_list, elem=elem)
 
     def requrs(folder, defname, path_list, elem):
+
+        dollar_variable_replace(elem)
         elem_tag_check(elem)
 
-        for elem1 in elem:
+        children = list(elem)  # Важно: создать копию перед итерацией
+
+        for elem1 in children:
             new_path = path_list.copy()
             if elem1.tag != folder:
                 new_path.append(elem1.tag)

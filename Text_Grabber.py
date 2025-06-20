@@ -18,6 +18,7 @@ from tkinter import Button
 from tkinter import filedialog
 from typing import Dict, Tuple
 
+import PIL.Image
 import lxml.etree as etree
 import pyperclip
 import ttkbootstrap
@@ -33,6 +34,7 @@ import Check_New_Version
 import Finalizing
 import Patch_grabber
 import Text_grabber_settings
+import Translate_updater_xml_old_to_new
 import image_edit
 from Finish_string_module import finish_string
 from GlobFunc import xml_get_text
@@ -46,7 +48,7 @@ from text2 import add_elts_from_par
 from text2 import find_parents_in_list_of_pathes
 from text2 import parent_folders
 
-Version_of_Text_grabber = "1.4.2"
+Version_of_Text_grabber = "1.5.3"
 Last_Rimworld_version = "1.5"
 
 global exitString
@@ -601,7 +603,8 @@ def main(Inputed_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
     """List of parent pathes"""
 
     'Add Data parents pathes'
-    parent_xml_pathes.extend([a for a in Path(S.Path_to_Data).glob('*/Defs/**/*.xml')])
+    if S.Path_to_Data is not None:
+        parent_xml_pathes.extend([a for a in Path(S.Path_to_Data).glob('*/Defs/**/*.xml')])
 
 
     printy("Searching parents... Done ", 'n')
@@ -633,6 +636,40 @@ def main(Inputed_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
     printy('Writing Files...', 'c')
 
+    def adding_elems_into_root_by_Parent_elem(root: etree.Element, DEBUG_current_element=False):
+
+        for r in root:  # type: etree.Element
+
+            # xml.etree.ElementTree.dump(r)
+            ParentName = r.get('ParentName')
+            if ParentName is None:
+                continue
+            if ParentName not in tf.Parent_list:
+                print("Не найден родитель", ParentName)
+
+                continue
+            if r.tag != tf.Parent_list[ParentName].tag:
+                if S.Game_language == "Russian":
+                    Error_log.append(f"Файл: {fil}\n"
+                                     f"Класс родителя отличается от Класса наследника\n"
+                                     f"{r.tag} {r.attrib} and {tf.Parent_list[ParentName].tag} {tf.Parent_list[ParentName].attrib}\n"
+                                     f"Это не критическая ошибка. Но, возможно, придется переместить файл в папку, соответствующую классу родителя\n")
+                else:
+                    Error_log.append(f"File: {fil}\n"
+                                     f"The class of the parent differs from the class of the heir\n"
+                                     f"{r.tag} {r.attrib} and {tf.Parent_list[ParentName].tag} {tf.Parent_list[ParentName].attrib}\n"
+                                     f"That is not critical error. But you may have to move the file to the folder corresponding to the parent class.\n")
+
+            # print(f"Добавляются элементы из родителя {[x.tag for x in tf.Parent_list[ParentName]]} в:")
+            # ET.dump(r)
+
+            add_elts_from_par(r, tf.Parent_list[ParentName], DEBUG_current_element=DEBUG_current_element, change_current_bool=True, )
+
+            # for elements_in_parent_Def in reversed([j for j in tf.Parent_list[ParentName]]):
+            #     adding_elems(r, elements_in_parent_Def)
+            # print(f"Рут после добавления:")
+            # ET.dump(r)
+            # print(f"{r.tag}.{r.attrib}")
 
     # print(tf.Defs.keys())
     for fl_idx, fil in enumerate(tf.Defs):
@@ -647,43 +684,15 @@ def main(Inputed_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
             # print("Добавление элементов из родителей")
 
-            def adding_elems_into_root_by_Parent_elem(root: etree.Element):
-
-                for r in root:  #type: etree.Element
-
-                    # xml.etree.ElementTree.dump(r)
-                    ParentName = r.get('ParentName')
-                    if ParentName is None:
-                        continue
-                    if ParentName not in tf.Parent_list:
-                        print("Не найден родитель", ParentName)
-
-                        continue
-                    if r.tag != tf.Parent_list[ParentName].tag:
-                        if S.Game_language == "Russian":
-                            Error_log.append(f"Файл: {fil}\n"
-                                             f"Класс родителя отличается от Класса наследника\n"
-                                             f"{r.tag} {r.attrib} and {tf.Parent_list[ParentName].tag} {tf.Parent_list[ParentName].attrib}\n"
-                                             f"Это не критическая ошибка. Но, возможно, придется переместить файл в папку, соответствующую классу родителя\n")
-                        else:
-                            Error_log.append(f"File: {fil}\n"
-                                             f"The class of the parent differs from the class of the heir\n"
-                                             f"{r.tag} {r.attrib} and {tf.Parent_list[ParentName].tag} {tf.Parent_list[ParentName].attrib}\n"
-                                             f"That is not critical error. But you may have to move the file to the folder corresponding to the parent class.\n")
-
-                    # print(f"Добавляются элементы {[x.tag for x in tf.Parent_list[ParentName]]} в:")
-                    # ET.dump(r)
 
 
-                    add_elts_from_par(r, tf.Parent_list[ParentName], change_current_bool=True)
 
-                    # for elements_in_parent_Def in reversed([j for j in tf.Parent_list[ParentName]]):
-                    #     adding_elems(r, elements_in_parent_Def)
-                    # print(f"Рут после добавления:")
-                    # ET.dump(r)
-                    # print(f"{r.tag}.{r.attrib}")
 
-            adding_elems_into_root_by_Parent_elem(root)
+
+            adding_elems_into_root_by_Parent_elem(root, DEBUG_current_element=False)
+
+
+
 
             FDPT, XmlExtensions_Keyed = finish_string(tree)
 
@@ -820,7 +829,7 @@ def main(Inputed_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                 # print("----------------------------")
 
             if XmlExtensions_Keyed:
-                Keyed_path = Path('_Translation') / 'Languages' / S.Game_language / 'Keyed' / fil.stem.rpartition("\\")[2] + fil.suffix
+                Keyed_path = Path('_Translation') / 'Languages' / S.Game_language / 'Keyed' / str(fil.stem.rpartition("\\")[2]) + str(fil.suffix)
                 printy(
                     f"Founed  XmlExtensions.SettingsMenuDef -> [<y]Creating Keyed file:@ [y]{escape_printy_string(str(Keyed_path))}")
                 Keyed_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1370,6 +1379,9 @@ def main(Inputed_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 Pause_checkbox_var: ttkbootstrap.BooleanVar
 
 
+
+
+
 class TestApp(ttk_boot.Window):
 
     def disable_btns_switch(self, disable: bool):
@@ -1512,7 +1524,9 @@ class TestApp(ttk_boot.Window):
 
         self.menubtn.pack(anchor='sw', side='left', fill='both', pady=(5, 0))
 
-        self.settings_image = ttk_boot.ImageTk.PhotoImage(file="Images\\Settings_icon.png", master=self)
+        self.settings_image1 = PIL.Image.open("Images\\Settings_icon.png").resize((30, 29))
+        self.settings_image = ttk_boot.ImageTk.PhotoImage(self.settings_image1)
+        # self.settings_image = ttk_boot.ImageTk.PhotoImage(file="Images\\Settings_icon.png", master=self)
 
         def run_settings_gui():
             # Window_Text_grabber.withdraw()
@@ -1522,6 +1536,19 @@ class TestApp(ttk_boot.Window):
                                                command=lambda: run_settings_gui())
         self.settings_button.pack(anchor='ne', side='right', expand=False, pady=(5, 0))
 
+        def run_translate_update_gui():
+            # Window_Text_grabber.withdraw()
+            raise_console(True)
+
+            Translate_updater_xml_old_to_new.run_from_main_prog(Window_Text_grabber, S.Settings_language)
+
+
+        self.transalte_update_btn = ttk_boot.Button(self.Main_frame2, text='Update translation' if S.Settings_language != 'ru' else 'Обновить перевод',
+                                                    command=lambda: run_translate_update_gui())
+        self.transalte_update_btn.pack(anchor='nw', side='right', expand=False, pady=(5, 0), padx=(5,5), ipady=7)
+
+
+
         self.Main_frame3 = ttk_boot.Frame(self.Content_frame, padding=5)
         self.Main_frame3.pack(expand=True, fill='x', anchor='nw', )
         self.Main_frame3.pack_forget()
@@ -1530,7 +1557,7 @@ class TestApp(ttk_boot.Window):
                                               bootstyle="secondary", maximum=100)
         self.Floodgauge.pack(anchor='s', side='bottom', expand=True, fill='both')
 
-        self.btns = [self.Enter_button, self.settings_button, ]  # self.menubtn, ]
+        self.btns = [self.Enter_button, self.settings_button, self.transalte_update_btn]  # self.menubtn, ]
 
     def start_move(self, event):
         """ change the (x, y) coordinate on mousebutton press and hold motion """
@@ -1671,8 +1698,14 @@ if __name__ == '__main__':
     # Window_Text_grabber.after(1000, lambda: update_settings())
     Window_Text_grabber.mainloop()
 
+
+
+
+
+
 '''
 pyinstaller Text_Grabber.spec
+
 
 
 
@@ -1682,4 +1715,6 @@ Copy-Item -Path Images -Destination dist/Text_Grabber -Recurse
 Copy-Item -Path locale -Destination dist/Text_Grabber -Recurse
 Copy-Item -Path db.json -Destination dist/Text_Grabber
 Compress-Archive -Path "dist/Text_Grabber" -DestinationPath "dist/Text_Grabber.zip" -update
+
+
 '''

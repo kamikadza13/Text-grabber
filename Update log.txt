@@ -1,11 +1,29 @@
 Update log
 
 
-    TODO: Поправить loadfolder Добавляется точка вместо слеша тут F:\Games\steamapps\workshop\content\294100\2478833213
-    TODO: Поправить loadfolder Остается 1.5 когда не нужна F:\Games\steamapps\workshop\content\294100\2478833213
-    TODO: Поправить loadfolder например в F:\Games\steamapps\workshop\content\294100\2196278117
-
     TODO: Проверить Li_Class_Replace
+    TODO: Проверить FSFABE_Bionic_Implants_Brain.xml из [FSF] Advanced Bionics Expansion (добавил в тест)
+Update 1.5.3
+    Fixed QuestScriptDef elements duplicates.
+    Added replacing QuestScriptDef variables like <text>$returnLetterText</text> if variable added like:
+    			<li Class="QuestNode_Set">
+					<name>returnLetterText</name>
+					<value>{PAWNS} [pawnListHaveConjugation] returned after helping the village with busy work and misssions</value>
+				</li>
+
+Update 1.5.2
+    Fixed Parent li adding
+
+Update 1.5.1
+    Added translation update button!
+
+
+Update 1.5.0
+    Fixed inheritance from parents - Huge error (some text for translate was skipped)!
+
+
+Update 1.4.3
+    Bugfixes
 
 Update 1.4.2
     Bugfixes

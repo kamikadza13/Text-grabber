@@ -393,7 +393,7 @@ class GeneralFrame(Frame):
                            _("tools and death messages into russian"),
                            SV.Translate_tools_into_russian,
                            'Translate_tools_into_russian',
-                           tooltip_text=_('Translate stock->ложe, barrel->ствол, acid fangs->кислотные клыки и т.п.'
+                           tooltip_text=_('Translate stock->приклад, barrel->ствол, acid fangs->кислотные клыки и т.п.'
                                           )
                            ).pack(anchor=tk.W, pady=(0, 0))
 
