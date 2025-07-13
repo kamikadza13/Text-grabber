@@ -4,6 +4,7 @@ import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from pprint import pprint
 from typing import Dict, List, Tuple, Union
 
 import lxml
@@ -12,7 +13,7 @@ from lxml.etree import Element, _Element
 
 from GlobVars import state
 
-
+DEBUG_mode = False
 @dataclass
 class Pp:
     req_modsID_list: List[str] = None
@@ -40,8 +41,181 @@ class Pp:
         self.ModSettingsFramework_Keyed_id_list = []
         self.all_grabbed_Keyed_list = {}
 
+def parse_version(version_str):
+    # Извлекаем основную часть (до первого пробела)
+    clean_version = version_str.split()[0]
+    # Разбиваем на компоненты по точкам
+    parts = clean_version.split('.')
+    # Конвертируем каждую часть в число
+    return [int(part) for part in parts]
+
+@dataclass
+class Reqmod:
+    steamId: str = None
+    name: str = None
+    steamName: str = None
+    packageId: str = None
+    last_v: list = None
+
+    def __lt__(self, other):
+        if not isinstance(other, Reqmod):
+            return NotImplemented
+
+        # Обрабатываем None как пустой список
+        self_ver = self.last_v or []
+        other_ver = other.last_v or []
+
+        return self_ver < other_ver
+
+founded_mods_by_name = {
+    'Core': '',
+
+    'Royalty': 'Ludeon.Rimworld.Royalty',
+    'Rimworld - Royality': 'Ludeon.Rimworld.Royalty',
+    'Royalty [Official DLC]': 'Ludeon.Rimworld.Royalty',
+
+    'Ideology': 'Ludeon.Rimworld.Ideology',
+    'Rimworld - Ideology': 'Ludeon.Rimworld.Ideology',
+    'Ideology [Official DLC]': 'Ludeon.Rimworld.Ideology',
+
+    'Biotech': 'Ludeon.Rimworld.Biotech',
+    'Rimworld - Biotech': 'Ludeon.Rimworld.Biotech',
+    'Biotech [Official DLC]': 'Ludeon.Rimworld.Biotech',
+
+    'Anomaly': 'Ludeon.Rimworld.Anomaly',
+    'Rimworld - Anomaly': 'Ludeon.Rimworld.Anomaly',
+    'Anomaly [Official DLC]': 'Ludeon.Rimworld.Anomaly',
+
+    'Vanilla Factions Expanded - Ancients': 'oskarpotocki.vfe.vfea',
+    'Vanilla Factions Expanded Ancients': 'oskarpotocki.vfe.vfea',
+
+    'Vanilla Factions Expanded - Classical': 'oskarpotocki.vfe.classical',
+    'Vanilla Factions Expanded Classical': 'oskarpotocki.vfe.classical',
+
+    'Vanilla Factions Expanded - Deserters': 'oskarpotocki.vfe.deserters',
+    'Vanilla Factions Expanded Deserters': 'oskarpotocki.vfe.deserters',
+    'Deserters': 'oskarpotocki.vfe.deserters',
+
+    'Vanilla Factions Expanded - Empire': 'oskarpotocki.vfe.empire',
+    'Vanilla Factions Expanded Empire': 'oskarpotocki.vfe.empire',
+
+    'Vanilla Factions Expanded - Insectoids 2': 'oskarpotocki.vfe.insectoid2',
+    'Vanilla Factions Expanded Insectoids 2': 'oskarpotocki.vfe.insectoid2',
+
+    'Vanilla Factions Expanded - Mechanoids': 'oskarpotocki.vfe.mechanoid',
+    'Vanilla Factions Expanded Mechanoids': 'oskarpotocki.vfe.mechanoid',
+
+    'Vanilla Factions Expanded - Medieval': 'oskarpotocki.vanillafactionsexpanded.medievalmodule',
+    'Vanilla Factions Expanded Medieval': 'oskarpotocki.vanillafactionsexpanded.medievalmodule',
+
+    'Vanilla Factions Expanded - Megacorp': 'oskarpotocki.vfe.megacorp',
+    'Vanilla Factions Expanded Megacorp': 'oskarpotocki.vfe.megacorp',
+
+    'Vanilla Factions Expanded - Pirates': 'oskarpotocki.vfe.pirates',
+    'Vanilla Factions Expanded Pirates': 'oskarpotocki.vfe.pirates',
+
+    'Vanilla Factions Expanded - Settlers': 'oskarpotocki.vanillafactionsexpanded.settlersmodule',
+    'Vanilla Factions Expanded Settlers': 'oskarpotocki.vanillafactionsexpanded.settlersmodule',
+
+    'Vanilla Factions Expanded - Tribals': 'oskarpotocki.vfe.tribals',
+    'Vanilla Factions Expanded Tribals': 'oskarpotocki.vfe.tribals',
+
+    'Vanilla Factions Expanded - Vikings': 'oskarpotocki.vfe.vikings',
+    'Vanilla Factions Expanded Vikings': 'oskarpotocki.vfe.vikings',
+
+    'Vanilla Chemfuel Expanded': 'vanillaexpanded.vchemfuele',
+
+    'Combat Extended': 'ceteam.combatextended',
+    'CE': 'ceteam.combatextended',
+
+    'Vanilla Anomaly Expanded - Insanity': 'vanillaexpanded.vanomalyeinsanity',
+    'Vanilla Anomaly Expanded Insanity': 'vanillaexpanded.vanomalyeinsanity'
+}
 
 
+
+
+def search_mod_id_by_name(data, modNamed_set: set[str]):
+
+    if not modNamed_set:
+        return []
+
+    founded_ids_list = []
+    founded_modname_not_founded_id_list = []
+
+    modname_list = list(modNamed_set)
+
+    def founded_mods_by_name_func(modname_list):
+
+        remove_list = []
+        for name in modname_list:
+            if founded_mods_by_name.get(name):
+                founded_ids_list.append(founded_mods_by_name.get(name))
+                remove_list.append(name)
+
+
+        for r in remove_list:
+            modname_list.remove(r)
+        return modname_list
+
+    modname_list = founded_mods_by_name_func(modname_list)
+    if not modname_list:
+        return founded_ids_list
+
+    def get_dict_elems_by_name(mod_list):
+        if DEBUG_mode:
+            print('Searching:', mod_list)
+        results = {a: [] for a in mod_list}
+
+        for mod_id_elem in data['database']:
+            """mod_id_elem like 1274936357"""
+            # print(mod_id_elem)
+            # try:
+
+            name = data['database'][mod_id_elem].get('name')
+            steamName = data['database'][mod_id_elem].get('steamName')
+            if name in mod_list or steamName in mod_list:
+                packageId = data['database'][mod_id_elem].get('packageId')
+                gameVersions = data['database'][mod_id_elem].get('gameVersions')
+                if gameVersions:
+                    last_v = parse_version(max(gameVersions, key=parse_version))
+                else:
+                    last_v = None
+                req = Reqmod(steamId=mod_id_elem, name=name, steamName=steamName, packageId=packageId, last_v=last_v)
+                if DEBUG_mode:
+                    print('req', req)
+                    print('results:', results)
+                if name in results:
+                    results[name].append(req)
+                else:
+                    results[steamName].append(req)
+
+            # except Exception as ex:
+            #     print(ex, 'Error finding name/stamname in', mod_id_elem)
+            #     continue
+        return results
+
+    elems_by_name_from_database = get_dict_elems_by_name(modname_list)
+
+
+    for searching_mod_name in elems_by_name_from_database:
+
+        if elems_by_name_from_database[searching_mod_name]:
+            "Поиск среди результатов элемента с самой последней версией и получение его packageId"
+
+            maxv_elem = max(elems_by_name_from_database[searching_mod_name]) # type: Reqmod
+            packageId = getattr(maxv_elem, 'packageId')
+            if packageId:
+                if DEBUG_mode:
+                    pprint(elems_by_name_from_database[searching_mod_name], width=120)
+
+                founded_ids_list.append(packageId)
+                continue
+            founded_modname_not_founded_id_list.append(maxv_elem)
+    if DEBUG_mode:
+        pprint(founded_modname_not_founded_id_list)
+    # TODO: founded_modname_not_founded_id_list сделать по нему поиск когда-нибудь
+    return  founded_ids_list
 
 
 sabaka_names_all_patch_grabber = []
@@ -76,8 +250,8 @@ def main(folder_required_mods: Tuple, patches_folder=Path('.'), tags_to_extract=
 
 
     # database_path = r'D:\Games\steamapps\workshop\content\294100\1847679158\db\db.json'
-    data = json.loads(open(database_path, encoding="utf-8").read())
-
+    with open(database_path, encoding='utf-8') as f:
+        data: Dict[str, Dict] = json.load(f)
 
 
     list_of_extract_tags_patch_grabber = [ll.strip("\n ") for ll in tags_to_extract]
@@ -346,57 +520,23 @@ def main(folder_required_mods: Tuple, patches_folder=Path('.'), tags_to_extract=
 
             New_mods = []
 
-            def search_mod_id_by_name(modName):
 
-                preset_mods_id = (
-                    (('Royalty', 'Rimworld - Royality', "Royalty [Official DLC]"), 'Ludeon.Rimworld.Royalty'),
-                    (('Ideology', 'Rimworld - Ideology', "Ideology [Official DLC]"), 'Ludeon.Rimworld.Ideology'),
-                    (('Biotech', 'Rimworld - Biotech', "Biotech [Official DLC]"), 'Ludeon.Rimworld.Biotech'),
-                    (('Anomaly', 'Rimworld - Anomaly', "Anomaly [Official DLC]"), 'Ludeon.Rimworld.Anomaly'),
-                    (('Vanilla Factions Expanded - Ancients', 'Vanilla Factions Expanded Ancients'),'oskarpotocki.vfe.vfea'),
-                    (('Vanilla Factions Expanded - Classical', 'Vanilla Factions Expanded Classical'),'oskarpotocki.vfe.classical'),
-                    (('Vanilla Factions Expanded - Deserters', 'Vanilla Factions Expanded Deserters', 'Deserters'), 'oskarpotocki.vfe.deserters'),
-                    (('Vanilla Factions Expanded - Empire', 'Vanilla Factions Expanded Empire'), 'oskarpotocki.vfe.empire'),
-                    (('Vanilla Factions Expanded - Insectoids 2', 'Vanilla Factions Expanded Insectoids 2'), 'oskarpotocki.vfe.insectoid2'),
-                    (('Vanilla Factions Expanded - Mechanoids', 'Vanilla Factions Expanded Mechanoids'), 'oskarpotocki.vfe.mechanoid'),
-                    (('Vanilla Factions Expanded - Medieval', 'Vanilla Factions Expanded Medieval'), 'oskarpotocki.vanillafactionsexpanded.medievalmodule'),
-                    (('Vanilla Factions Expanded - Megacorp', 'Vanilla Factions Expanded Megacorp'), 'oskarpotocki.vfe.megacorp'),
-                    (('Vanilla Factions Expanded - Pirates', 'Vanilla Factions Expanded Pirates'), 'oskarpotocki.vfe.pirates'),
-                    (('Vanilla Factions Expanded - Settlers', 'Vanilla Factions Expanded Settlers'), 'oskarpotocki.vanillafactionsexpanded.settlersmodule'),
-                    (('Vanilla Factions Expanded - Tribals', 'Vanilla Factions Expanded Tribals'), 'oskarpotocki.vfe.tribals'),
-                    (('Vanilla Factions Expanded - Vikings', 'Vanilla Factions Expanded Vikings'), 'oskarpotocki.vfe.vikings'),
-                    (('Combat Extended', 'CE'), 'ceteam.combatextended'),
-                    (('Vanilla Anomaly Expanded - Insanity', 'Vanilla Anomaly Expanded Insanity'), 'vanillaexpanded.vanomalyeinsanity'),
-
-                                  )
-
-
-                for m in preset_mods_id:
-                    if modName in m[0]:
-
-                        return m[1]
-
-                modNames = (modName,)
-                results = [data['database'][mod_id_] for mod_id_ in data['database'] if
-                           data['database'][mod_id_]["name"] in modNames]
-                if results:
-                    packageId = max(results, key=lambda x: x['gameVersions'])['packageId']
-
-                    return packageId
-                else:
-                    print(modName, end=" ")
-                    print(" -> Not found ID")
-                    return modName
 
             for ch in Operation_Class_PatchOperationFindMod:
                 match ch.tag.lower():
                     case "mods":
+                        mods_names_list = []
                         for li in ch:
-                            modId = search_mod_id_by_name(li.text)
+                            if li.text is not None:
+                                mods_names_list.append(li.text)
 
-                            New_mods.append(modId)
-                            SS.req_modsID_list.append(modId)
-                            # print(mod_name)
+                        if mods_names_list:
+                            print("\tPatch FindMods:", mods_names_list)
+                            modIds = set(search_mod_id_by_name(data, set(mods_names_list)))
+                            if modIds:
+                                New_mods.extend(modIds)
+                                SS.req_modsID_list.extend(modIds)
+                        # print(mod_name)
                     case "match":
                         operation_selector(ch)
                     case "nomatch":

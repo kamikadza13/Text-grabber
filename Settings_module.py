@@ -15,6 +15,7 @@ class SettingsValues:
 
         SettingsPath_AppData = Path(appdirs.user_config_dir(Prog_name, appauthor=False, roaming=True))
         r'''C:\Users\Kamikadza13\AppData\Roaming\Text_grabber'''
+        r'%APPDATA%\Text_grabber'
 
 
         General_settings_path = Path('Settings') / 'A1_Settings.ini'

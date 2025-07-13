@@ -1,6 +1,19 @@
 Update log
 
 
+    TODO: ПЕРЕДЕЛАТЬ БАЗУ ДАННЫХ НА РИМСОРТ!
+    TODO: ПЕРЕДЕЛАТЬ БАЗУ ДАННЫХ НА РИМСОРТ!
+    TODO: ПЕРЕДЕЛАТЬ БАЗУ ДАННЫХ НА РИМСОРТ!
+    TODO: ПЕРЕДЕЛАТЬ БАЗУ ДАННЫХ НА РИМСОРТ!
+	
+	
+	Сделать запись найденных ID
+	
+	F:\Games\steamapps\workshop\content\294100\3201536200
+	
+	
+	
+	
     TODO: Проверить Li_Class_Replace
     TODO: Проверить FSFABE_Bionic_Implants_Brain.xml из [FSF] Advanced Bionics Expansion (добавил в тест)
 Update 1.5.3

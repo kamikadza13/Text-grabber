@@ -32,6 +32,7 @@ from ttkbootstrap.dialogs import Messagebox
 
 import Check_New_Version
 import Finalizing
+import Get_Database
 import Patch_grabber
 import Text_grabber_settings
 import Translate_updater_xml_old_to_new
@@ -44,11 +45,12 @@ from GlobVars import mod_data
 from GlobVars import state
 from GlobVars import tf
 from Patch_copy_module import find_patches_with_text
+from Settings_module import SVV as S
 from text2 import add_elts_from_par
 from text2 import find_parents_in_list_of_pathes
 from text2 import parent_folders
 
-Version_of_Text_grabber = "1.5.3"
+Version_of_Text_grabber = "1.5.4"
 Last_Rimworld_version = "1.5"
 
 global exitString
@@ -101,8 +103,6 @@ Window_Text_grabber = ttkbootstrap.Window
 Window_settings_app = ttkbootstrap.Window
 New_Name = 'Default mod name'
 
-from Settings_module import SVV as S
-# S = Text_grabber_settings.SettingsValues
 
 
 
@@ -247,6 +247,8 @@ def get_searching_folders_with_reqires():
         os.makedirs('_Translation', exist_ok=True)
         shcopy("loadFolders.xml", "_Translation/loadFolders.xml")
 
+
+
         with open('loadFolders.xml', 'r', encoding="utf-8") as lf:
             tree1 = etree.parse(lf)
         root1 = tree1.getroot()
@@ -254,7 +256,9 @@ def get_searching_folders_with_reqires():
         pathes: {str: ()} = {}
         """{Loadfolder path, (Required mods tuple)}"""
 
-        max_v: str = max([rim_version.tag for rim_version in root1])
+
+
+        max_v: str = max([rim_version.tag for rim_version in root1 if rim_version.tag is not etree.Comment])
         mod_data.max_version_by_Loadfolders = max_v
 
         def add_pathes_by_ver(ver_p: etree.Element, pathes: {str: ()}):
@@ -396,22 +400,15 @@ def make_files_path_to_translate(folders_: list[Path]):
                     TranslatingFiles_[Path(path) / file] = np
     return TranslatingFiles_
 
+def get_database_path():
+    database_path1 = Get_Database.database_path
+    printy("Database path ", end='')
+    print(database_path1)
+
+    return database_path1
 
 
 def patches():
-    def get_database_path():
-        database_path1 = ''
-        if S.Path_to_Mod_folder:
-            printy('\t\t\t\t[n>]Try get Mod Database into Steam mods folder:@', end="")
-            database_path1 = Path(S.Path_to_Mod_folder) / '1847679158/db/db.json'
-            printy(f'[<n] -> {escape_printy_string(database_path1)}@')
-
-        if not os.path.exists(database_path1):
-            printy('\t\t\t\t[n>]No Mod Database - get file from Textgrabber folder@')
-            database_path1 = state.prog / 'db.json'
-        else:
-            printy('\t\t\t\t[n]Mod Database Founded@')
-        return database_path1
 
     if folders.patches_folders:
 
@@ -616,7 +613,7 @@ def main(Inputed_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
     """{ PackageID : Path }"""
     if parent_mod_pathes_dict:
         for mod_path in parent_mod_pathes_dict.values():
-            parent_xml_pathes.extend([a for a in mod_path.rglob('*.xml') if 'Defs' in a.parts])
+            parent_xml_pathes.extend([a for a in mod_path.rglob('*.xml') if 'Defs' in a.parts if isfile(a)])
     printy("Finding defs in parents... Done ", 'n')
     print()
 
@@ -829,7 +826,7 @@ def main(Inputed_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                 # print("----------------------------")
 
             if XmlExtensions_Keyed:
-                Keyed_path = Path('_Translation') / 'Languages' / S.Game_language / 'Keyed' / str(fil.stem.rpartition("\\")[2]) + str(fil.suffix)
+                Keyed_path = Path('_Translation') / 'Languages' / S.Game_language / 'Keyed' / fil.name
                 printy(
                     f"Founed  XmlExtensions.SettingsMenuDef -> [<y]Creating Keyed file:@ [y]{escape_printy_string(str(Keyed_path))}")
                 Keyed_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1071,7 +1068,11 @@ def main(Inputed_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
                     b += '\t'
                 return b
 
-            name = root3.find("name").text
+            name_elem = root3.find("name")
+            if name_elem is None:
+                name = 'default name'
+            else:
+                name = name_elem.text
             description = root3.find("description")
             if description is not None:
                 if description.text is not None:
@@ -1692,6 +1693,8 @@ if __name__ == '__main__':
 
     Window_Text_grabber.update_fast_checkBTNs()
     Window_Text_grabber.after(100, lambda: updater())
+    Window_Text_grabber.after(100, lambda: Get_Database.compare_sha())
+
 
     # update_settings()
 
@@ -1713,7 +1716,6 @@ pyinstaller Text_Grabber.spec
 pyinstaller --noconfirm Text_Grabber.spec
 Copy-Item -Path Images -Destination dist/Text_Grabber -Recurse
 Copy-Item -Path locale -Destination dist/Text_Grabber -Recurse
-Copy-Item -Path db.json -Destination dist/Text_Grabber
 Compress-Archive -Path "dist/Text_Grabber" -DestinationPath "dist/Text_Grabber.zip" -update
 
 
