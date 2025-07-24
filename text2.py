@@ -32,7 +32,7 @@ def parent_folders(Mod_folder: str | None, Another_folder: str | None):
         if failed_steam_id:
             print(f"Fail find steamID '{failed_steam_id}'. Try find by packageId")
             print(f"Search by packageId finished")
-        if Another_folder is None:
+        if Another_folder is None or not Path(Another_folder).exists():
             return
         for f in Path(Another_folder).iterdir():
             if not f.is_dir():
@@ -43,7 +43,7 @@ def parent_folders(Mod_folder: str | None, Another_folder: str | None):
                 root = tree.getroot()
                 for el in root:
                     if el.tag.lower() == 'packageid':
-                        sc.another_fold_ids[el.tag.lower] = f
+                        sc.another_fold_ids[el.tag.lower()] = f
                         continue
         for packageId in mod_data.modDependencies:
             if packageId in sc.another_fold_ids:
@@ -73,7 +73,7 @@ def parent_folders(Mod_folder: str | None, Another_folder: str | None):
     """{ PackageID : Path }"""
 
     if not Mod_folder:
-        if Another_folder:
+        if Another_folder and Path(Another_folder).exists():
             searching_packageIds(None)
         else:
             return None
@@ -241,27 +241,67 @@ def find_parents_in_list_of_pathes(root_dir: list[Path]):
         # except Exception as e:
         #     print(f"Error processing {xml_path}: {e}")
 
+
+
+
+    def updating_parent_final_list():
+        iteration_count = 0  # Счётчик итераций для защиты от бесконечных циклов
+        MAX_ITERATIONS = 100  # Максимальное число итераций
+
+        while curr_parent_dict and iteration_count < MAX_ITERATIONS:
+            iteration_count += 1
+            changed = False  # Флаг изменения словаря
+
+            # Перебор копии ключей для безопасного удаления
+            for name in list(curr_parent_dict.keys()):
+                # Элемент мог быть удалён в этой же итерации
+                if name not in curr_parent_dict:
+                    continue
+
+                parent = curr_parent_dict[name]['parent']
+                # Если родитель готов - обрабатываем элемент
+                if parent in final_parent_dict:
+                    new_elem = add_elts_from_par(final_parent_dict[parent], curr_parent_dict[name]['elem'])
+                    nName = new_elem.attrib.get('Name')
+                    if nName is None:
+                        new_elem.attrib['Name'] = name
+                    final_parent_dict[name] = new_elem
+                    del curr_parent_dict[name]  # Удаляем обработанный элемент
+                    changed = True
+
+            # Защита от зависания: выход если изменений не было
+            if not changed:
+                break
+
+        # Добавляем оставшиеся элементы (зависшие или без родителя)
+        for name, dic in curr_parent_dict.items():
+            final_parent_dict[name] = dic['elem']
+
+
     "Нужен цикл проверки"
-    prev_size = len(curr_parent_dict)
-    while curr_parent_dict:
-        curr_size = len(curr_parent_dict)
-        if curr_size == prev_size:
-            # print("Зависшие элементы:", *curr_parent_dict.keys())
-            for name, dic in curr_parent_dict.items():
-                final_parent_dict[name] = dic['elem']
-            break  # Прерываем цикл, если размер не изменился
 
+    updating_parent_final_list()
 
-        prev_size = curr_size
-        for name in list(curr_parent_dict.keys()):
-            if name not in curr_parent_dict:
-                continue
-
-            parent = curr_parent_dict[name]['parent']
-            if parent in final_parent_dict:
-                new_elem = add_elts_from_par(final_parent_dict[parent], curr_parent_dict.pop(name)['elem'])
-                final_parent_dict[name] = new_elem
-
+    # prev_size = len(curr_parent_dict)
+    # while curr_parent_dict:
+    #     curr_size = len(curr_parent_dict)
+    #     if curr_size == prev_size:
+    #         # print("Зависшие элементы:", *curr_parent_dict.keys())
+    #         for name, dic in curr_parent_dict.items():
+    #             final_parent_dict[name] = dic['elem']
+    #         break  # Прерываем цикл, если размер не изменился
+    #
+    #
+    #     prev_size = curr_size
+    #     for name in list(curr_parent_dict.keys()):
+    #         if name not in curr_parent_dict:
+    #             continue
+    #
+    #         parent = curr_parent_dict[name]['parent']
+    #         if parent in final_parent_dict:
+    #             new_elem = add_elts_from_par(final_parent_dict[parent], curr_parent_dict.pop(name)['elem'])
+    #             final_parent_dict[name] = new_elem
+    #
 
 
     return final_parent_dict

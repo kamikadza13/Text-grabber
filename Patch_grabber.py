@@ -10,7 +10,9 @@ from typing import Dict, List, Tuple, Union
 import lxml
 import lxml.etree as etree
 from lxml.etree import Element, _Element
+from printy import printy
 
+from GlobFunc import xml_get_text
 from GlobVars import state
 
 DEBUG_mode = False
@@ -41,13 +43,7 @@ class Pp:
         self.ModSettingsFramework_Keyed_id_list = []
         self.all_grabbed_Keyed_list = {}
 
-def parse_version(version_str):
-    # Извлекаем основную часть (до первого пробела)
-    clean_version = version_str.split()[0]
-    # Разбиваем на компоненты по точкам
-    parts = clean_version.split('.')
-    # Конвертируем каждую часть в число
-    return [int(part) for part in parts]
+
 
 @dataclass
 class Reqmod:
@@ -134,7 +130,6 @@ founded_mods_by_name = {
 
 
 
-
 def search_mod_id_by_name(data, modNamed_set: set[str]):
 
     if not modNamed_set:
@@ -163,6 +158,17 @@ def search_mod_id_by_name(data, modNamed_set: set[str]):
         return founded_ids_list
 
     def get_dict_elems_by_name(mod_list):
+
+        def parse_version(version_str):
+            # Извлекаем основную часть (до первого пробела)
+            clean_version = version_str.split()[0]
+            # Разбиваем на компоненты по точкам
+            parts = clean_version.split('.')
+            # Конвертируем каждую часть в число
+            return [int(part) for part in parts]
+
+
+
         if DEBUG_mode:
             print('Searching:', mod_list)
         results = {a: [] for a in mod_list}
@@ -225,8 +231,6 @@ patches_file_count = 0
 
 
 
-def find_patch_pathes(patches_folder: Path):
-    return list(patches_folder.rglob("*.xml"))
 
 
 def main(folder_required_mods: Tuple, patches_folder=Path('.'), tags_to_extract=None, database_path=None):
@@ -234,6 +238,8 @@ def main(folder_required_mods: Tuple, patches_folder=Path('.'), tags_to_extract=
     Return Keyed dict with list of strings: Dict[Path, List[str]]
         {Path: [<Elem1>, <Elem2>]}
     Also update """
+
+    printy(f'\t\t\tProcessing patches: {patches_folder}', 'y>')
 
     @dataclass
     class ReqModAndText:
@@ -516,39 +522,87 @@ def main(folder_required_mods: Tuple, patches_folder=Path('.'), tags_to_extract=
                 elif a1.tag == 'match':
                     operation_selector(a1)
 
-        def PatchOperationFindMod(Operation_Class_PatchOperationFindMod: Element):
+
+
+        def PatchOperationFindMod(operation_Class_PatchOperationFindMod: _Element):
 
             New_mods = []
+            try:
+                packageId_bool = bool(xml_get_text(operation_Class_PatchOperationFindMod, 'packageId'))
+
+                if packageId_bool:
+                    mods = operation_Class_PatchOperationFindMod.find('mods')
+                    if mods is not None:
+                        for li in mods:
+                            mod = li.text if li.text is not None else ''
+                            if mod:
+                                New_mods.append(mod)
+                                SS.req_modsID_list.append(mod)
+
+                    caseTrue = operation_Class_PatchOperationFindMod.find('caseTrue')
+                    if caseTrue is not None:
+                        for c in caseTrue:
+                            operation_selector(c)
+                    caseFalse = operation_Class_PatchOperationFindMod.find('caseFalse')
+                    if caseFalse is not None:
+                        for mod in New_mods:
+                            try:
+                                SS.req_modsID_list.remove(mod)
+                            except ValueError as ex:
+                                continue
+
+                        for c in caseFalse:
+                            operation_selector(c)
+
+                else:
+                    for ch in operation_Class_PatchOperationFindMod:  # type: _Element
+                        match ch.tag.lower():
+                            case "mods":
+                                mods_names_list = []
+                                for li in ch:
+                                    if li.text is not None:
+                                        mods_names_list.append(li.text)
+
+                                if mods_names_list:
+                                    print("\tPatch FindMods:", mods_names_list)
+                                    modIds = set(search_mod_id_by_name(data, set(mods_names_list)))
+                                    if modIds:
+                                        New_mods.extend(modIds)
+                                        SS.req_modsID_list.extend(modIds)
+                                # print(mod_name)
+                            case "match":
+                                operation_selector(ch)
+                            case "nomatch":
+                                for mod in New_mods:
+                                    try:
+                                        SS.req_modsID_list.remove(mod)
+                                    except ValueError as ex:
+                                        continue
+                                operation_selector(ch)
+                            case "casetrue":
+                                for a in ch:
+                                    operation_selector(a)
+                            case "casefalse":
+                                for mod in New_mods:
+                                    try:
+                                        SS.req_modsID_list.remove(mod)
+                                    except ValueError as ex:
+                                        continue
+                                for a in ch:
+                                    operation_selector(a)
 
 
 
-            for ch in Operation_Class_PatchOperationFindMod:
-                match ch.tag.lower():
-                    case "mods":
-                        mods_names_list = []
-                        for li in ch:
-                            if li.text is not None:
-                                mods_names_list.append(li.text)
 
-                        if mods_names_list:
-                            print("\tPatch FindMods:", mods_names_list)
-                            modIds = set(search_mod_id_by_name(data, set(mods_names_list)))
-                            if modIds:
-                                New_mods.extend(modIds)
-                                SS.req_modsID_list.extend(modIds)
-                        # print(mod_name)
-                    case "match":
-                        operation_selector(ch)
-                    case "nomatch":
-                        operation_selector(ch)
-                    case "casetrue":
-                        for a in ch:
-                            operation_selector(a)
-                    case "casefalse":
-                        for a in ch:
-                            operation_selector(a)
-            for mod in New_mods:
-                SS.req_modsID_list.remove(mod)
+            except Exception as ex:
+                pass
+
+            try:
+                for mod in New_mods:
+                    SS.req_modsID_list.remove(mod)
+            except ValueError as ex:
+                pass
+
 
         def PatchOperationConditional(Operation_Class_PatchOperationConditional: Element):
             for ch in Operation_Class_PatchOperationConditional:
@@ -658,10 +712,7 @@ def main(folder_required_mods: Tuple, patches_folder=Path('.'), tags_to_extract=
     # printy(f"--->", 'b>')
 
 
-
-
-
-    patches_file_pathes_list = find_patch_pathes(patches_folder)
+    patches_file_pathes_list = [p for p in patches_folder.rglob("*.xml") if p.is_file()]
     '''Founded patches'''
     # print('Founded patches:', [str(path) for path in patches_file_pathes_list])
 
@@ -708,7 +759,7 @@ def main(folder_required_mods: Tuple, patches_folder=Path('.'), tags_to_extract=
         """Переделка словаря из
          {Путь: (моды), [текст]} в
             {
-            (Моды): {Путь: [текст]}
+                (Моды): {Путь: [текст]}
             }
         """
 

@@ -1,21 +1,21 @@
 Update log
 
 
-    TODO: ПЕРЕДЕЛАТЬ БАЗУ ДАННЫХ НА РИМСОРТ!
-    TODO: ПЕРЕДЕЛАТЬ БАЗУ ДАННЫХ НА РИМСОРТ!
-    TODO: ПЕРЕДЕЛАТЬ БАЗУ ДАННЫХ НА РИМСОРТ!
-    TODO: ПЕРЕДЕЛАТЬ БАЗУ ДАННЫХ НА РИМСОРТ!
+
+
+Update 1.5.6
+    Fixed parent adding.
 	
-	
-	Сделать запись найденных ID
-	
+	TODO: Переписать text2.py parent_folders
+    Fixed the inability to read Xml files, as well as all similar files. (Idiots can't even write file extensions properly.)
+
+	TODO: search XmlExtensions.FindMod by     <packageId>default = false</packageId>
+
 	F:\Games\steamapps\workshop\content\294100\3201536200
-	
-	
-	
 	
     TODO: Проверить Li_Class_Replace
     TODO: Проверить FSFABE_Bionic_Implants_Brain.xml из [FSF] Advanced Bionics Expansion (добавил в тест)
+
 Update 1.5.3
     Fixed QuestScriptDef elements duplicates.
     Added replacing QuestScriptDef variables like <text>$returnLetterText</text> if variable added like:

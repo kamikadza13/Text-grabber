@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from os.path import exists as file_exists
 from os.path import isfile as isfile
 from pathlib import Path
+from pprint import pprint
 from re import sub
 from shutil import copy as shcopy
 from shutil import copytree
@@ -50,8 +51,12 @@ from text2 import add_elts_from_par
 from text2 import find_parents_in_list_of_pathes
 from text2 import parent_folders
 
-Version_of_Text_grabber = "1.5.4"
-Last_Rimworld_version = "1.5"
+Version_of_Text_grabber: str = "1.5.6"
+Last_Rimworld_version: str = "1.6"
+
+DEBUG = False
+
+
 
 global exitString
 global folder
@@ -76,7 +81,6 @@ def escape_printy_string(string):
     return printy_escape(str(string))
 
 
-#   Текст startwith через regex - значит нужно экранировать спец символы типа $
 
 include_in_QOL = False
 incompatibleWith_QOL = '''\n	<incompatibleWith>
@@ -107,9 +111,9 @@ New_Name = 'Default mod name'
 
 
 
-def reading_about():
+def reading_about(data_path: str = 'About/About.xml'):
     try:
-        tree3 = etree.parse("About/About.xml")
+        tree3 = etree.parse(data_path)
         root3 = tree3.getroot()  #type: etree._Element
 
         def get_steam_id_PublishedFileId() -> str:
@@ -127,7 +131,7 @@ def reading_about():
         def get_supportedVersions():
             _ = root3.find("supportedVersions")
             b = ''
-            max_ver = '1.5'
+            max_ver: str = Last_Rimworld_version
 
             if _ is not None:
                 b = '\n'
@@ -197,6 +201,8 @@ def reading_about():
 
         mod_data.modDependencies = get_modDependencies()
 
+        return mod_data
+
 
 
 
@@ -204,11 +210,13 @@ def reading_about():
     except Exception as ex:
         printy("Reading About.xml error", 'n')
         state.error_log.append(ex)
-        pass
+        return mod_data
+
 
 
 def get_searching_folders_with_reqires():
     """
+    dict[Path, tuple]
     Возвращает словарь путей и требуемых модов для поиска.
     Формат возвращаемого значения:
     {
@@ -380,7 +388,7 @@ def make_files_path_to_translate(folders_: list[Path]):
                 printy(f'\t\t\t{escape_printy_string(folder_path)}:', '<y')
             for file in files:
 
-                if file.endswith('.xml') or (folder_name == 'Strings' and file.endswith('.txt')):
+                if file.lower().endswith('.xml') or (folder_name == 'Strings' and file.lower().endswith('.txt')):
                     printy(f'\t\t\t\t{escape_printy_string(os.path.join(path, file))}')
                     match folder_name:
                         case "Keyed":
@@ -400,102 +408,102 @@ def make_files_path_to_translate(folders_: list[Path]):
                     TranslatingFiles_[Path(path) / file] = np
     return TranslatingFiles_
 
-def get_database_path():
-    database_path1 = Get_Database.database_path
-    printy("Database path ", end='')
-    print(database_path1)
-
-    return database_path1
-
 
 def patches():
 
-    if folders.patches_folders:
+    if not folders.patches_folders:
+        return
 
-        printy(f'\t\tTry grab Defs from patches into "_Translation/Grabbed_Defs_from_patches"', 'n')
+    printy(f'\t\tTry grab Defs from patches into "_Translation/Grabbed_Defs_from_patches"', 'n')
+    printy('\t\tPatch_Grabber starts')
 
-        database_path = get_database_path()
+    database_path = Get_Database.database_path
+    printy(f'\t\tDatabase path - {escape_printy_string(database_path)}')
 
-        patches_file_count = 0
-        for pf in folders.patches_folders:
-            Patch_grabber.main(patches_folder=pf,
-                               folder_required_mods=folders.patches_folders[pf],
-                               tags_to_extract=S.Tags_to_extraction,
-                               database_path=database_path)
 
-        "Получили state.mods_folders"
+    patches_file_count = 0
 
-        if state.keyed_from_patches:
-            for file in state.keyed_from_patches:
-                path = Path(
-                    '_Translation') / 'From_patches' / 'No mods required' / 'Languages' / S.Game_language / 'Keyed'
-                os.makedirs(path, exist_ok=True)
+    for pf in folders.patches_folders:
+        Patch_grabber.main(patches_folder=pf,
+                           folder_required_mods=folders.patches_folders[pf],
+                           tags_to_extract=S.Tags_to_extraction,
+                           database_path=database_path)
 
-                li_elem = f'<li>From_patches/No mods required</li>\n\t\t'
+    "Получили state.mods_folders и state.keyed_from_patches"
+
+    if state.keyed_from_patches:
+        for file in state.keyed_from_patches:
+            path = Path(
+                '_Translation') / 'From_patches' / 'No mods required' / 'Languages' / S.Game_language / 'Keyed'
+            os.makedirs(path, exist_ok=True)
+
+            li_elem = f'<li>From_patches/No mods required</li>\n\t\t'
+            if li_elem not in state.new_loadfolder_pathes:
+                state.new_loadfolder_pathes.append(li_elem)
+            new_name = str(file.stem) + str(patches_file_count) + str(file.suffix)
+            patches_file_count += 1
+            new_path = path / new_name
+            with open(new_path, "w", encoding="utf-8") as new_patch_file:
+                patches_file_count += 1
+                new_patch_file.write("<LanguageData>\n")
+                for line in state.keyed_from_patches[file]:
+                    new_patch_file.write("\t" + line + "\n")
+                new_patch_file.write(r"</LanguageData>")
+
+
+    # from pprint import pprint
+    # pprint(state.mods_folders, sort_dicts=False, width=200)
+    '''
+    -----{
+    -----(req mods): 
+    ---------{Path:
+    ------------text1, text2]
+    ---------}
+    -----}
+    '''
+    # print('state.mods_folders:', state.mods_folders)
+    for mf in state.mods_folders:
+        # print('mf: ', mf)
+        # print(state.mods_folders[mf])
+        mod_folder_name_req_from_tuple = sub('[^0-9a-zA-Z]+', '_', str(mf[0])) if mf else ""
+        new_grabbed_folder_path = Path('_Translation') / 'Grabbed_Defs_from_patches' / mod_folder_name_req_from_tuple
+        # print(new_grabbed_folder_path)
+        os.makedirs(new_grabbed_folder_path, exist_ok=True)
+
+        for filepath in state.mods_folders[mf]:
+
+            new_file_path = new_grabbed_folder_path / str(filepath.stem + str(patches_file_count) + filepath.suffix)
+            with open(new_file_path, "w", encoding="utf-8") as new_patch_file:
+                patches_file_count += 1
+                new_patch_file.write("<Defs>\n")
+
+                if mf:
+                    new_patch_file.write(f'<!-- {list(mf)} -->\n')
+
+                for l1 in state.mods_folders[mf][filepath]:
+                    new_patch_file.write(l1)
+                new_patch_file.write("\n</Defs>")
+
+                new_modfold_name_req_from_tuple = mod_folder_name_req_from_tuple if mod_folder_name_req_from_tuple else "No mods required"
+
+                np = Path(
+                    '_Translation') / 'From_patches' / new_modfold_name_req_from_tuple / 'Languages' / S.Game_language / "DefInjected"
+
+                folders.patches_defs[new_file_path] = np
+
+                loadfolder_path = Path('From_patches') / new_modfold_name_req_from_tuple
+
+                if mf:
+                    li_elem = f'<li IfModActive="{mf[0]}">{loadfolder_path.as_posix()}</li>\n\t\t'
+                else:
+                    li_elem = f'<li>{loadfolder_path.as_posix()}</li>\n\t\t'
+
                 if li_elem not in state.new_loadfolder_pathes:
                     state.new_loadfolder_pathes.append(li_elem)
-                new_name = str(file.stem) + str(patches_file_count) + str(file.suffix)
-                patches_file_count += 1
-                new_path = path / new_name
-                with open(new_path, "w", encoding="utf-8") as new_patch_file:
-                    patches_file_count += 1
-                    new_patch_file.write("<LanguageData>\n")
-                    for line in state.keyed_from_patches[file]:
-                        new_patch_file.write("\t" + line + "\n")
-                    new_patch_file.write(r"</LanguageData>")
 
-
-        # from pprint import pprint
-        # pprint(state.mods_folders, sort_dicts=False, width=200)
-        '''
-        -----{
-        -----(req mods): 
-        ---------{Path:
-        ------------text1, text2]
-        ---------}
-        -----}
-        '''
-        # print('state.mods_folders:', state.mods_folders)
-        for mf in state.mods_folders:
-            # print('mf: ', mf)
-            # print(state.mods_folders[mf])
-            mod_folder_name_req_from_tuple = sub('[^0-9a-zA-Z]+', '_', str(mf[0])) if mf else ""
-            new_grabbed_folder_path = Path('_Translation') / 'Grabbed_Defs_from_patches' / mod_folder_name_req_from_tuple
-            # print(new_grabbed_folder_path)
-            os.makedirs(new_grabbed_folder_path, exist_ok=True)
-
-            for filepath in state.mods_folders[mf]:
-
-                new_file_path = new_grabbed_folder_path / str(filepath.stem + str(patches_file_count) + filepath.suffix)
-                with open(new_file_path, "w", encoding="utf-8") as new_patch_file:
-                    patches_file_count += 1
-                    new_patch_file.write("<Defs>\n")
-
-                    if mf:
-                        new_patch_file.write(f'<!-- {list(mf)} -->\n')
-
-                    for l1 in state.mods_folders[mf][filepath]:
-                        new_patch_file.write(l1)
-                    new_patch_file.write("\n</Defs>")
-
-                    new_modfold_name_req_from_tuple = mod_folder_name_req_from_tuple if mod_folder_name_req_from_tuple else "No mods required"
-
-                    np = Path(
-                        '_Translation') / 'From_patches' / new_modfold_name_req_from_tuple / 'Languages' / S.Game_language / "DefInjected"
-
-                    folders.patches_defs[new_file_path] = np
-
-                    loadfolder_path = Path('From_patches') / new_modfold_name_req_from_tuple
-
-                    if mf:
-                        li_elem = f'<li IfModActive="{mf[0]}">{loadfolder_path.as_posix()}</li>\n\t\t'
-                    else:
-                        li_elem = f'<li>{loadfolder_path.as_posix()}</li>\n\t\t'
-
-                    if li_elem not in state.new_loadfolder_pathes:
-                        state.new_loadfolder_pathes.append(li_elem)
-
-        printy(f'\t\tPatches in: {escape_printy_string(folders.patches_folders)}', 'o')
+        printy(f'\t\tPatches in:', 'o')
+        for path, iids in folders.patches_folders.items():
+            printy(f'\t\t{" ":<11}{escape_printy_string(path.as_posix())} : {escape_printy_string(str(iids))}', 'o')
         printy('\t\tFiles in Patches:', 'o')
         folders.patches_pathes = make_files_path_to_translate(list(folders.patches_folders))
         # print('folders.patches_pathes')
@@ -533,7 +541,7 @@ def main(Inputed_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
     rmtree('__Keyed_from_patches', ignore_errors=True)
 
     printy("Reading About.xml and PublishedFileId.xml", 'n')
-    reading_about()
+    reading_about('About/About.xml')
 
     printy('Searching pathes to root folders', 'n')
     folders.searching_pathes = get_searching_folders_with_reqires()
@@ -600,8 +608,9 @@ def main(Inputed_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
     """List of parent pathes"""
 
     'Add Data parents pathes'
-    if S.Path_to_Data is not None:
-        parent_xml_pathes.extend([a for a in Path(S.Path_to_Data).glob('*/Defs/**/*.xml')])
+    if not DEBUG:
+        if S.Path_to_Data is not None:
+            parent_xml_pathes.extend([a for a in Path(S.Path_to_Data).glob('*/Defs/**/*.xml')])
 
 
     printy("Searching parents... Done ", 'n')
@@ -620,12 +629,23 @@ def main(Inputed_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
 
 
     printy("Updating parent dict ", 'n')
+
     tf.Parent_list = find_parents_in_list_of_pathes(parent_xml_pathes)
     """{name: elem}"""
     printy("Updating parent dict... Done ", 'n')
 
 
     Floodgauge['value'] = 30
+
+
+    if DEBUG:
+        print("tf.Parent_list = ", end='')
+        pprint(tf.Parent_list)
+
+        for l in tf.Parent_list:
+            print(l)
+            ET.dump(tf.Parent_list[l])
+
 
     print()
 
