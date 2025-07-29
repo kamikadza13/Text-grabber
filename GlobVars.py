@@ -1,4 +1,5 @@
 # GlobVars.py
+import dataclasses
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Tuple, List
@@ -15,13 +16,13 @@ class ModData:
     supportedVersions = ''
     description = 'Default description'
 
-    modDependencies: dict
+    modDependencies: dict = dataclasses.field(default_factory=dict)
     """dependence_dict[packageId]=
                {'displayName': displayName,
                 'steamWorkshopUrl': steamWorkshopUrl,
                 'downloadUrl': downloadUrl,
                 'steamID': steamID}"""
-
+    loadafter_list: list = dataclasses.field(default_factory=list)
     max_version = 'v1.5'
     max_version_by_folders = '0.1'
     max_version_by_Loadfolders = 'v0.1'
@@ -29,17 +30,17 @@ class ModData:
 
 @dataclass
 class AppState:
-    exit_string: list = None
+    exit_string: list = dataclasses.field(default_factory=list)
     current_folder: str = ""
-    error_log: list = None
-    parent_names: list = None
+    error_log: list = dataclasses.field(default_factory=list)
+    parent_names: list = dataclasses.field(default_factory=list)
 
     prog = Path.cwd()
 
-    new_loadfolder_pathes: list = None
+    new_loadfolder_pathes: list = dataclasses.field(default_factory=list)
     f'<li>...</li>\n\t\t'
 
-    mods_folders: Dict[Tuple, Dict[Path, List[str]]] = None
+    mods_folders: Dict[Tuple, Dict[Path, List[str]]] = dataclasses.field(default_factory=dict)
     '''
     -----{
     -----(req mods): 
@@ -49,72 +50,23 @@ class AppState:
     -----}
     '''
 
-    keyed_from_patches: dict[Path, list[str]] = None
-
-
-    def __post_init__(self):
-        # Инициализируем списки при создании
-        self.exit_string = []
-        self.error_log = []
-        self.parent_names = []
-        self.new_loadfolder_pathes = []
-
-        self.mods_folders = {}
-        '''
-        -----{
-        -----(req mods): 
-        ---------{Path:
-        ------------text1, text2]
-        ---------}
-        -----}
-        '''
-
-        self.keyed_from_patches = {}
-
-
-
-
-
-@dataclass
-class SsS:
-    p_full = Path()
-    p_root = Path()
-    p_name = Path()
+    keyed_from_patches: dict[Path, list[str]] = dataclasses.field(default_factory=dict)
 
 
 @dataclass
 class A1:
-    searching_pathes: dict[Path, Tuple] = None
+    searching_pathes: dict[Path, Tuple] = dataclasses.field(default_factory=dict)
 
-    def_folders: list[Path] = None
-    lang_folders: list[Path] = None
-    patches_folders: dict[Path, Tuple] = None
+    def_folders: list[Path] = dataclasses.field(default_factory=list)
+    lang_folders: list[Path] = dataclasses.field(default_factory=list)
+    patches_folders: dict[Path, Tuple] = dataclasses.field(default_factory=dict)
     'path , (required mods...)'
 
-    keyed_folders: list[Path] = None
-    strings_folders: list[Path] = None
+    keyed_folders: list[Path] = dataclasses.field(default_factory=list)
+    strings_folders: list[Path] = dataclasses.field(default_factory=list)
 
-    patches_defs: dict[Path, Path] = None
-    patches_pathes: dict[Path, Path] = None
-
-
-
-    def __post_init__(self):
-        # Инициализируем списки при создании
-        self.searching_pathes = {}
-
-        self.def_folders = []
-        self.lang_folders = []
-        self.patches_folders = {}
-
-        self.keyed_folders = []
-        self.strings_folders = []
-
-
-
-        self.patches_defs = {}
-        self.patches_pathes = {}
-
+    patches_defs: dict[Path, Path] = dataclasses.field(default_factory=dict)
+    patches_pathes: dict[Path, Path] = dataclasses.field(default_factory=dict)
 
 
 
@@ -123,28 +75,17 @@ class A1:
 
 @dataclass
 class TranslatingFiles:
-    Defs: dict[Path, Path] = None
-    Keyed: dict[Path, Path] = None
-    Strings: dict[Path, Path] = None
+    Defs: dict[Path, Path] = dataclasses.field(default_factory=dict)
+    Keyed: dict[Path, Path] = dataclasses.field(default_factory=dict)
+    Strings: dict[Path, Path] = dataclasses.field(default_factory=dict)
 
-    Parent_list: dict[str, list[etree.Element]] = None
+    Parent_list: dict[str, list[etree.Element]] = dataclasses.field(default_factory=dict)
     '''par_list[name] = list(Elements)'''
 
 
 
-
-    def __post_init__(self):
-        self.Defs = {}
-        self.Keyed = {}
-        self.Strings = {}
-
-
-        self.Parent_list = {}
-
-
 state = AppState()
-mod_data = ModData(modDependencies={})
-SS = SsS()
+mod_data = ModData()
 folders = A1()
 tf = TranslatingFiles()
 

@@ -163,6 +163,8 @@ ScenPart_='''
 
     Translate_tools_into_russian: bool = True
 
+    Open_folder_after_end: bool = True
+
     #   [Comments]
     Add_filename_comment: bool = True
     Add_comment: bool = True
@@ -259,6 +261,7 @@ ScenPart_='''
             'Adding_xml_version_encoding_string_ckeckbtn': False,
             'Adding_xml_version_encoding_string_in_Keyed': True,
             'Translate_tools_into_russian': True,
+            'Open_folder_after_end': True
 
         },
         'Comment': {
@@ -302,12 +305,7 @@ ScenPart_='''
     section_config.optionxform = str
 
 
-    no_text_check_label_list = [
-        'label.slateref',
-        'text.slateref',
-        'customletterlabel.slateref',
-        'customlettertext.slateref',
-    ]
+
 
     def get(self, name):
         return getattr(self, name)
@@ -331,6 +329,16 @@ ScenPart_='''
     def write(self):
         with open(self.SettingsPath.SettingsPath_AppData / self.SettingsPath.General_settings_path, 'w', encoding='utf-8') as aaa:
             SettingsValues.section_config.write(aaa)
+
+    no_text_check_label_list = [
+        'label.slateref',
+        'text.slateref',
+        'customletterlabel.slateref',
+        'customlettertext.slateref',  # 'Здесь все ок, именно в Tags_to_extraction'
+        'messageDefendersAttacking',
+        'cooldownGerund',
+        'chargeNoun',
+    ]
 
 class SettingsLoader:
     def __init__(self, config_path: Path, SV: SettingsValues):
@@ -506,15 +514,41 @@ def updating_settings():
     SVV.set('Tkey_system_on', False)
 
 
+
     for string in SVV.no_text_check_label_list:
-        """
-        'label.slateref',
-        'text.slateref',
-        'customletterlabel.slateref',
-        'customlettertext.slateref',
-        """
-        if string not in SVV.Tags_to_extraction:
-            SVV.Tags_to_extraction.append(string)
+        if string.lower() not in SVV.Tags_to_extraction:
+
+
+            print(string, 'not in Tags_to_extraction, adding...')
+
+            try:
+                SVV.Tags_to_extraction.append(string)
+
+                add_line_in_text_file(SVV.SettingsPath.SettingsPath_AppData / SVV.SettingsPath.Tags_to_extraction, string)
+            except Exception as ex:
+                print(ex)
+
+
+
+
+
+
+def add_line_in_text_file(path_of_file: Path, new_line: str):
+    try:
+
+        with open(path_of_file, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+
+        # Удаляем строки, состоящие только из пробельных символов
+        cleaned_lines = [line for line in lines if line.strip()]
+
+        cleaned_lines.append('\n' + new_line)
+
+        with open(path_of_file, 'w', encoding='utf-8') as f:
+            f.writelines(cleaned_lines)
+
+    except Exception as ex:
+        print(ex)
 
 
 

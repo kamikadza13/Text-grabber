@@ -382,6 +382,14 @@ class GeneralFrame(Frame):
                                           )
                            ).pack(anchor=tk.W, pady=(10, 0))
 
+            NewCheckButton(F1,
+                           _("Open Grabbed folder after end"),
+                           SV.Open_folder_after_end,
+                           'Open_folder_after_end',
+                           tooltip_text=_('Open Grabbed folder after processing grabbing text'
+                                          )
+                           ).pack(anchor=tk.W, pady=(10, 0))
+
         def only_russian():
             FF = ttk.Labelframe(self, text=_("Russian language"))
             FF.pack(anchor=tk.N, side=tk.LEFT, padx=(5, 0))

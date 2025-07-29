@@ -1,4 +1,5 @@
 import copy
+import dataclasses
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Dict
@@ -12,13 +13,16 @@ from GlobVars import mod_data
 
 @dataclass
 class SearchClass:
-    another_fold_ids: dict[str, Path] = None
+    another_fold_ids: dict[str, Path] = dataclasses.field(default_factory=dict)
 
     def __post_init__(self):
         # Инициализируем списки при создании
         self.another_fold_ids = {}
 
 
+
+
+no_comment_parser = etree.XMLParser(remove_comments=True)
 
 
 
@@ -39,11 +43,11 @@ def parent_folders(Mod_folder: str | None, Another_folder: str | None):
                 continue
             if (f / 'About' / 'About.xml').exists():
                 with open(f / 'About' / 'About.xml', 'r', encoding="utf-8") as lf:
-                    tree = etree.parse(lf)
+                    tree = etree.parse(lf, parser=no_comment_parser)
                 root = tree.getroot()
                 for el in root:
-                    if el.tag.lower() == 'packageid':
-                        sc.another_fold_ids[el.tag.lower()] = f
+                    if str(el.tag).lower() == 'packageid':
+                        sc.another_fold_ids[str(el.tag).lower()] = f
                         continue
         for packageId in mod_data.modDependencies:
             if packageId in sc.another_fold_ids:
@@ -64,8 +68,9 @@ def parent_folders(Mod_folder: str | None, Another_folder: str | None):
             else:
                 failed_steam_id = packageId
 
-        if failed_steam_id:
-            searching_packageIds(failed_steam_id)
+            if failed_steam_id:
+                print("Can't find steam folder:", str(Mod_folder), '/', str(mod_data.modDependencies[packageId]['steamID']))
+                searching_packageIds(failed_steam_id)
 
 
 

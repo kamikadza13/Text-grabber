@@ -3,11 +3,26 @@ Update log
 
 
 
+Update 1.5.7
+	Added if need comps.CompApparelReloadable.cooldownGerund and comps.CompApparelReloadable.chargeNoun
+	For VEF_Abilities_AbilityDef added jobReportString and verbProperties.label
+	Added pawnSingular and leaderTitle into FactionDefs
+
+
+
+О, окей. Я могу добавить в DamageDef если нет deathMessage
+Если я правильно понимаю, что если нет чего-то нужного, то игра подставляет что-то стоковое, в репорте такое:
+<OuterRim_Blaster.deathMessage>{0} has been killed.</OuterRim_Blaster.deathMessage>
+
+добавить в список извлечения messageDefendersAttacking
+
+
 Update 1.5.6
     Fixed parent adding.
+    Fixed the inability to read Xml files, as well as all similar files. (Idiots can't even write file extensions properly.)
 	
 	TODO: Переписать text2.py parent_folders
-    Fixed the inability to read Xml files, as well as all similar files. (Idiots can't even write file extensions properly.)
+
 
 	TODO: search XmlExtensions.FindMod by     <packageId>default = false</packageId>
 

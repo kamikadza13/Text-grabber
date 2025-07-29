@@ -159,45 +159,45 @@ def ScenarioDef_add_strings(elem: ET.Element):
 
 def DamageDef_add_strings(elem: ET.Element):
     if elem.find("deathMessage") is None:
-        if 'ParentName' in elem.attrib:
-            deathMessage = ET.SubElement(elem, "deathMessage")
-            a_00 = elem.attrib['ParentName']
-            if S.Translate_tools_into_russian:
-                match a_00:
-                    case "Flame":
-                        deathMessage.text = "{0} был сожжен до смерти."
-                    case "CutBase":
-                        deathMessage.text = "{0} был зарезан насмерть."
-                    case "BluntBase":
-                        deathMessage.text = "{0} был избит до смерти."
-                    case "Scratch":
-                        deathMessage.text = "{0} был растерзан до смерти."
-                    case "Bite":
-                        deathMessage.text = "{0} был искусан до смерти."
-                    case "Bomb":
-                        deathMessage.text = "{0} погиб при взрыве."
-                    case "Arrow":
-                        deathMessage.text = "{0} был застрелен стрелой."
-                    case _:
-                        deathMessage.text = "{0} был убит."
-            else:
-                match a_00:
-                    case "Flame":
-                        deathMessage.text = "{0} has burned to death."
-                    case "CutBase":
-                        deathMessage.text = "{0} has been cut to death."
-                    case "BluntBase":
-                        deathMessage.text = "{0} has been beaten to death."
-                    case "Scratch":
-                        deathMessage.text = "{0} has been torn to death."
-                    case "Bite":
-                        deathMessage.text = "{0} has been bitten to death."
-                    case "Bomb":
-                        deathMessage.text = "{0} has died in an explosion."
-                    case "Arrow":
-                        deathMessage.text = "{0} has been shot to death by an arrow."
-                    case _:
-                        deathMessage.text = "{0} has been killed."
+        deathMessage = ET.SubElement(elem, "deathMessage")
+        a_00 = elem.get('ParentName')
+
+        if S.Translate_tools_into_russian:
+            match a_00:
+                case "Flame":
+                    deathMessage.text = "{0} был сожжен до смерти."
+                case "CutBase":
+                    deathMessage.text = "{0} был зарезан насмерть."
+                case "BluntBase":
+                    deathMessage.text = "{0} был избит до смерти."
+                case "Scratch":
+                    deathMessage.text = "{0} был растерзан до смерти."
+                case "Bite":
+                    deathMessage.text = "{0} был искусан до смерти."
+                case "Bomb":
+                    deathMessage.text = "{0} погиб при взрыве."
+                case "Arrow":
+                    deathMessage.text = "{0} был застрелен стрелой."
+                case _:
+                    deathMessage.text = "{0} был убит."
+        else:
+            match a_00:
+                case "Flame":
+                    deathMessage.text = "{0} has burned to death."
+                case "CutBase":
+                    deathMessage.text = "{0} has been cut to death."
+                case "BluntBase":
+                    deathMessage.text = "{0} has been beaten to death."
+                case "Scratch":
+                    deathMessage.text = "{0} has been torn to death."
+                case "Bite":
+                    deathMessage.text = "{0} has been bitten to death."
+                case "Bomb":
+                    deathMessage.text = "{0} has died in an explosion."
+                case "Arrow":
+                    deathMessage.text = "{0} has been shot to death by an arrow."
+                case _:
+                    deathMessage.text = "{0} has been killed."
 
 
 # def comps_Li_Class_Replace(Def: ET.Element):
@@ -872,12 +872,99 @@ def CombatExtended_AmmoDef(ThingDef: ET.Element):
     #     ThingDef.tag = AmmoDef
 
 
+def compProperties_ALL_Reloadable(elem: ET.Element):
+    cs = elem.find('comps')
+    if cs is not None:
+        for li in cs:
+            li_class = li.get('Class', '')
+
+            if li_class.startswith('CompProperties_') and li_class.endswith('Reloadable'):
+
+                li.tag = li_class.replace('CompProperties_','Comp',1)
+                cooldownGerund = li.find('cooldownGerund')
+                if cooldownGerund is None:
+                    cooldownGerund = ET.SubElement(li, 'cooldownGerund')
+                    if S.Translate_tools_into_russian:
+                        cooldownGerund.text = 'на перезарядке'
+                    else:
+                        cooldownGerund.text = 'on reload'
+
+                chargeNoun = li.find('chargeNoun')
+                if chargeNoun is None:
+                    chargeNoun = ET.SubElement(li, 'chargeNoun')
+                    if S.Translate_tools_into_russian:
+                        chargeNoun.text = 'заряд'
+                    else:
+                        chargeNoun.text = 'charge'
+
+
+def vEF_Abilities_AbilityDef(elem: ET.Element):
+    try:
+        jobReportString = elem.find('jobReportString')
+        if jobReportString is None:
+            jobReportString = ET.SubElement(elem, 'jobReportString')
+            if S.Translate_tools_into_russian:
+                jobReportString.text = 'Использование способности: {0}'
+            else:
+                jobReportString.text = 'Using ability: {0}'
+    except Exception as ex:
+        print(ex)
+    try:
+
+        text_el = elem.find('label')
+        if text_el is None:
+            return
+        text = text_el.text
+        verbProperties = elem.find('verbProperties')
+        if verbProperties is None:
+            verbProperties = ET.SubElement(elem, 'verbProperties')
+            label = ET.SubElement(verbProperties, 'label')
+            label.text = text
+        else:
+            label = verbProperties.find('label')
+            if label is None:
+                label = ET.SubElement(verbProperties, 'label')
+                label.text = text
+    except Exception as ex:
+        print(ex)
+
+
+def FactionDef_def(elem: ET.Element):
+    try:
+        pawnSingular = elem.find('pawnSingular')
+        leaderTitle = elem.find('leaderTitle')
+
+        if pawnSingular is None:
+            pawnSingular = ET.SubElement(elem, 'pawnSingular')
+            if S.Translate_tools_into_russian:
+                pawnSingular.text = 'участник'
+            else:
+                pawnSingular.text = 'member'
+        if leaderTitle is None:
+            leaderTitle = ET.SubElement(elem, 'leaderTitle')
+            if S.Translate_tools_into_russian:
+                leaderTitle.text = 'лидер'
+            else:
+                leaderTitle.text = 'leader'
+
+
+
+
+    except Exception as ex:
+        print(ex)
+    pass
+
+
 def elem_tag_check(elem):
     if elem.tag == "AlienRace.ThingDef_AlienRace":
         elem.tag = elem.tag.replace('AlienRace.ThingDef_AlienRace', 'ThingDef')
     elem_tag = elem.tag
     if elem_tag == "RulePackDef":
         RulePackDef_def(elem)
+    if elem_tag == "FactionDef":
+        FactionDef_def(elem)
+    if elem_tag == "VEF.Abilities.AbilityDef":
+        vEF_Abilities_AbilityDef(elem)
     if elem_tag == "BodyDef":
         BodyDef_rename_li(elem)
     if elem_tag == "PawnKindDef":
@@ -892,12 +979,16 @@ def elem_tag_check(elem):
         add_missing_verbs_if_verbClass(elem)
         ThingDef_add_strings(elem)
         translate_ThingDef_tools(elem)
+
+        compProperties_ALL_Reloadable(elem)
+
+
         comps = elem.find('comps')
+
         if S.Translate_tools_into_russian:
             if comps is not None:
                 for ee in comps:
                     translate_ThingDef_tools(ee)
-
         ThingDef_MVCF_Comps_CompProperties_VerbProps(elem)
 
     if elem_tag == "AlienRace.BackstoryDef":

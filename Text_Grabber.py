@@ -10,14 +10,13 @@ from dataclasses import dataclass
 from os.path import exists as file_exists
 from os.path import isfile as isfile
 from pathlib import Path
-from pprint import pprint
 from re import sub
 from shutil import copy as shcopy
 from shutil import copytree
 from shutil import rmtree
 from tkinter import Button
 from tkinter import filedialog
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 
 import PIL.Image
 import lxml.etree as etree
@@ -34,13 +33,14 @@ from ttkbootstrap.dialogs import Messagebox
 import Check_New_Version
 import Finalizing
 import Get_Database
+import Get_database_by_list_of_pathes_of_mods
+import Get_required_packageIds_and_modNames
 import Patch_grabber
 import Text_grabber_settings
 import Translate_updater_xml_old_to_new
 import image_edit
 from Finish_string_module import finish_string
 from GlobFunc import xml_get_text
-from GlobVars import SS
 from GlobVars import folders
 from GlobVars import mod_data
 from GlobVars import state
@@ -49,9 +49,8 @@ from Patch_copy_module import find_patches_with_text
 from Settings_module import SVV as S
 from text2 import add_elts_from_par
 from text2 import find_parents_in_list_of_pathes
-from text2 import parent_folders
 
-Version_of_Text_grabber: str = "1.5.6"
+Version_of_Text_grabber: str = "1.5.7"
 Last_Rimworld_version: str = "1.6"
 
 DEBUG = False
@@ -190,6 +189,22 @@ def reading_about(data_path: str = 'About/About.xml'):
                                                       'steamID': steamID}
             return dependence_dict
 
+        def get_loadafter_list():
+            try:
+                loadafter_list: List[str] = []
+                loadAfter = root3.find('loadAfter')
+                if loadAfter is not None:
+                    for li in loadAfter:
+                        txt = li.text
+                        if txt:
+                            loadafter_list.append(str(txt))
+
+                return loadafter_list
+
+            except Exception as ex:
+                printy("Reading About.xml loadAfter error", 'n')
+                return []
+
         mod_data.name = xml_get_text(root3, 'name')
         mod_data.packageId = xml_get_text(root3, 'packageId')
         mod_data.author = xml_get_text(root3, 'author')
@@ -198,6 +213,8 @@ def reading_about(data_path: str = 'About/About.xml'):
         mod_data.description = xml_get_text(root3, 'description')
 
         mod_data.url = get_steam_id_PublishedFileId()
+
+        mod_data.loadafter_list = get_loadafter_list()
 
         mod_data.modDependencies = get_modDependencies()
 
@@ -521,21 +538,18 @@ def main(Inputed_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
             folder_selected = os.path.normpath(filedialog.askdirectory(title="Select MOD folder"))
             if not folder_selected or folder_selected == ".":
                 exit_prog()
-            Fullpath = Path(folder_selected)
+            Fullpath1 = Path(folder_selected)
         else:
-            Fullpath = Path(Inputed_path_to_mod_2)
+            Fullpath1 = Path(Inputed_path_to_mod_2)
+        printy(f'\tWork directory: "{Fullpath1}", Mod folder: {Fullpath1.name}', 'n')
 
-        SS.p_full = Fullpath
-        SS.p_name = Fullpath.name
-        SS.p_root = Fullpath.parent
-        printy(f'\tWork directory: "{SS.p_full}", Mod folder: {SS.p_name}', 'n')
+        os.chdir(Fullpath1)
+        return Fullpath1
 
-        os.chdir(SS.p_full)
-
-    change_to_mod_dir(Inputed_path_to_mod)
+    Fullpath = change_to_mod_dir(Inputed_path_to_mod)
 
     Window_Text_grabber.Enter_textbox.delete(0, 'end')
-    Window_Text_grabber.Enter_textbox.insert(0, SS.p_full)
+    Window_Text_grabber.Enter_textbox.insert(0, str(Fullpath))
     rmtree('_Translation', ignore_errors=True)
     rmtree('__Defs_from_patches', ignore_errors=True)
     rmtree('__Keyed_from_patches', ignore_errors=True)
@@ -557,6 +571,19 @@ def main(Inputed_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
     # printy('\tSearching Defs, Keyed, Strings, Patches, Languages', 'y>')
 
     delete_folders = []
+
+    printy(f'\t\tСollecting mod PackageId and Names in database from:', 'o>')
+    for p in [S.Path_to_Mod_folder, S.Path_to_Another_folder]:
+        printy(f'\t\t\t{escape_printy_string(str(Path(p)))}', 'y>')
+    db = Get_database_by_list_of_pathes_of_mods.get_packageID_names_pathes_database([S.Path_to_Mod_folder, S.Path_to_Another_folder])
+
+    printy(f'\t\t\t\tCollected [r]{escape_printy_string(len(db))}@ mod PackageIds and Names', predefined='o>')
+
+    print()
+
+    printy(f'\t\tSearching pathes of required mods', 'n')
+    founded_parent_folders = Get_required_packageIds_and_modNames.main(db)
+    printy(f'\t\tSearching pathes of required mods... Done', 'n')
 
     patches()
     print()
@@ -612,17 +639,26 @@ def main(Inputed_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
         if S.Path_to_Data is not None:
             parent_xml_pathes.extend([a for a in Path(S.Path_to_Data).glob('*/Defs/**/*.xml')])
 
-
     printy("Searching parents... Done ", 'n')
     print()
     Floodgauge['value'] = 20
 
     printy("Finding defs in parents", 'n')
-    parent_mod_pathes_dict = parent_folders(S.Path_to_Mod_folder, S.Path_to_Another_folder)
-    """{ PackageID : Path }"""
-    if parent_mod_pathes_dict:
-        for mod_path in parent_mod_pathes_dict.values():
-            parent_xml_pathes.extend([a for a in mod_path.rglob('*.xml') if 'Defs' in a.parts if isfile(a)])
+    # parent_mod_pathes_dict = parent_folders(S.Path_to_Mod_folder, S.Path_to_Another_folder)
+    # """{ PackageID : Path }"""
+    # if parent_mod_pathes_dict:
+    #     for mod_path in parent_mod_pathes_dict.values():
+    #         parent_xml_pathes.extend([a for a in mod_path.rglob('*.xml') if 'Defs' in a.parts if isfile(a)])
+
+
+    for p in founded_parent_folders:
+        parent_xml_pathes.extend([a for a in p.rglob('*.xml') if 'Defs' in a.parts if isfile(a)])
+
+
+
+
+
+
     printy("Finding defs in parents... Done ", 'n')
     print()
 
@@ -638,13 +674,13 @@ def main(Inputed_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
     Floodgauge['value'] = 30
 
 
-    if DEBUG:
-        print("tf.Parent_list = ", end='')
-        pprint(tf.Parent_list)
-
-        for l in tf.Parent_list:
-            print(l)
-            ET.dump(tf.Parent_list[l])
+    # if DEBUG:
+    #     print("tf.Parent_list = ", end='')
+    #     pprint(tf.Parent_list)
+    #
+    #     for l in tf.Parent_list:
+    #         print(l)
+    #         ET.dump(tf.Parent_list[l])
 
 
     print()
@@ -1386,6 +1422,14 @@ def main(Inputed_path_to_mod="", Floodgauge: ttk_boot.Floodgauge = ttk_boot.Floo
     print("----------------------------------------------")
     print("All done")
     Floodgauge['value'] = 100
+
+
+    if S.Open_folder_after_end:
+        try:
+            os.startfile(sanitize_filename(New_Name))
+        except Exception:
+            pass
+
     if Error_log:
         ...
     if Pause_checkbox_var.get():
@@ -1737,6 +1781,6 @@ pyinstaller --noconfirm Text_Grabber.spec
 Copy-Item -Path Images -Destination dist/Text_Grabber -Recurse
 Copy-Item -Path locale -Destination dist/Text_Grabber -Recurse
 Compress-Archive -Path "dist/Text_Grabber" -DestinationPath "dist/Text_Grabber.zip" -update
-
+explorer "E:\Text_grabber\dist"
 
 '''

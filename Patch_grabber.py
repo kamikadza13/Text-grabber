@@ -64,7 +64,7 @@ class Reqmod:
         return self_ver < other_ver
 
 founded_mods_by_name = {
-    'Core': '',
+    'Core': 'Ludeon.RimWorld',
 
     'Royalty': 'Ludeon.Rimworld.Royalty',
     'Rimworld - Royality': 'Ludeon.Rimworld.Royalty',
