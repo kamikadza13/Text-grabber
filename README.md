@@ -4,6 +4,7 @@
 
 # How download Text_Grabber 
 My God, someone really can't download and unpack, so I have to do this manual?
+Download by link above. Or through the releases section on the right.
 <img width="928" height="221" alt="Screenshot_1" src="https://github.com/user-attachments/assets/b780bced-a2a6-40ee-a9bb-aa93c724200b" />
 <img width="845" height="382" alt="Screenshot_5" src="https://github.com/user-attachments/assets/af6e2610-c526-4f70-9efd-64a663d9cda1" />
 <img width="886" height="288" alt="Screenshot_4" src="https://github.com/user-attachments/assets/8ef6df30-a2af-4986-9c69-41a7217eb163" />
