@@ -14,7 +14,8 @@ Download by link above. Or through the releases section on the right.
 
 # Using
 Grab text from mod files and create new Folder
-(with About folder for fast publishing Translation mod) ready to translate
+(with About folder for fast publishing Translation mod)
+ready to translate
 <img width="441" height="160" alt="Screenshot_6" src="https://github.com/user-attachments/assets/355d2e95-2cae-4acc-af55-a5c06972d5f9" />
 <img width="1130" height="482" alt="Screenshot_8" src="https://github.com/user-attachments/assets/325f8dec-e67b-48ab-930e-5a5dcba9baba" />
 <img width="751" height="386" alt="Screenshot_9" src="https://github.com/user-attachments/assets/8b2cc94b-f6c7-47c7-8a19-bb465b041f80" />
