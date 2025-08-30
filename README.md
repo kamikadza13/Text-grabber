@@ -2,8 +2,26 @@
 
 ## Download: [Text-grabber last version](https://github.com/kamikadza13/Text-grabber/releases/latest/download/Text_Grabber.zip)
 
+# How download Text_Grabber 
+My God, someone really can't download and unpack, so I have to do this manual?\
+Download by link above. Or through the releases section on the right.\
+<img width="928" height="221" alt="Screenshot_1" src="https://github.com/user-attachments/assets/b780bced-a2a6-40ee-a9bb-aa93c724200b" />                 
+Extract the Text_Grabber folder from Text_Grabber.zip anywhere.\
+<img width="845" height="382" alt="Screenshot_5" src="https://github.com/user-attachments/assets/af6e2610-c526-4f70-9efd-64a663d9cda1" />     
+The folder inside looks like this. Run the program via exe.\
+<img width="886" height="288" alt="Screenshot_4" src="https://github.com/user-attachments/assets/8ef6df30-a2af-4986-9c69-41a7217eb163" />
 
-Grab text from mod files and create new Folder (with About folder for fast publishing Translation mod) ready to translate
+
+
+
+# Using
+Grab text from mod files and create new Folder (with About folder for fast publishing Translation mod) ready to translate\
+<img width="441" height="160" alt="Screenshot_6" src="https://github.com/user-attachments/assets/355d2e95-2cae-4acc-af55-a5c06972d5f9" />
+<img width="1130" height="482" alt="Screenshot_8" src="https://github.com/user-attachments/assets/325f8dec-e67b-48ab-930e-5a5dcba9baba" />
+<img width="751" height="386" alt="Screenshot_9" src="https://github.com/user-attachments/assets/8b2cc94b-f6c7-47c7-8a19-bb465b041f80" />
+
+
+
 
 Before:
 
@@ -15,7 +33,7 @@ After:
 
 ![Screenshot_2](https://github.com/kamikadza13/Text-grabber/assets/57400507/fdaf16e7-eac0-4267-8e38-932a51ae814c)
 
-The Name "RT Fuse" was taken from the original mod.
+The Name "RT Fuse" was taken from the original mod.\
 The ending "rus" was added using the program settings.
 
 Open new folder - RT Fuse rus:
