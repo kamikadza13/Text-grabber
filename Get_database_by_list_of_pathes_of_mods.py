@@ -4,6 +4,10 @@ from pathlib import Path
 
 from Levenshtein import ratio  # Библиотека python-Levenshtein
 from lxml import etree
+from printy import printy
+
+from GlobFunc import error_handler
+from Settings_module import SVV as S
 
 no_comment_parser = etree.XMLParser(remove_comments=True)
 
@@ -128,7 +132,7 @@ class MultiIndexDict:
     def fuzzy_find(self, **conditions):
         return self.find(fuzzy_search=True, **conditions)
 
-    def partial_find(self, min_score=0.6, **conditions):
+    def partial_find(self, min_score=0.85, **conditions):
         """Поиск по частичному совпадению с использованием алгоритма Левенштейна"""
         if not conditions:
             return None
@@ -186,10 +190,16 @@ class MultiIndexDict:
         return len(self.records)
 
 
+
 def searching_all_packageIds(mod_path_list, database):
+    processed_idx = 0
     for mp in mod_path_list:
+        if mp is None:
+            continue
 
         for f in Path(mp).iterdir():
+            printy(f"\r\tProcessed: {processed_idx} Elements", 'b>', end='')
+            processed_idx += 1
             if not f.is_dir():
                 continue
             try:
@@ -255,11 +265,29 @@ def get_packageID_names_pathes_database(list_of_folders_to_search_mods:list[Path
         "vanilla factions expanded deserters": ["deserters"],
 
     }
+    @error_handler(error_text="No Data folder")
+    def add_data_pathes_in_database(dbb):
+        rimworld_data_path = S.Path_to_Data
 
+        aa = [
+            ('core',    'Ludeon.RimWorld',          Path(rimworld_data_path) / 'Core'),
+            ('Royalty', 'Ludeon.RimWorld.Royalty',  Path(rimworld_data_path) / 'Royalty'),
+            ('Ideology','Ludeon.RimWorld.Ideology', Path(rimworld_data_path) / 'Ideology'),
+            ('Biotech', 'Ludeon.RimWorld.Biotech',  Path(rimworld_data_path) / 'Biotech'),
+            ('Anomaly', 'Ludeon.RimWorld.Anomaly',  Path(rimworld_data_path) / 'Anomaly'),
+            ('Odyssey', 'Ludeon.RimWorld.Odyssey',  Path(rimworld_data_path) / 'Odyssey'),
+        ]
+        for a in aa:
+            name, iid, path = a
+            if path.exists():
+                dbb.add({'name': name, 'packageid': iid, 'path': path})
 
     db = MultiIndexDict(case_insensitive_fields=["name", "packageId"], fuzzy_fields=["name"], partial_match_fields=["name"], synonyms=synonyms)
 
+    add_data_pathes_in_database(db)
+
     searching_all_packageIds(list_of_folders_to_search_mods, db)
+    printy('\n')
     # a1 = db.find(name='Vanilla Factions Expanded - Ancients')
     # a1 = db.find(packageId='Neronix17.OuterRim.GalacticDiversity')
     # a1 = db.partial_find(name='combat exten')

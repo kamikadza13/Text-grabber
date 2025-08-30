@@ -1,35 +1,40 @@
 Update log
 
+	TODO: search XmlExtensions.FindMod by     <packageId>default = false</packageId>
 
+
+
+
+Update 1.6.5
+    Fixed -- in Comments
+	Fixed errors cause comments
+	Reworked merging folders
+	
+
+
+
+Update 1.6.4
+	Сделать настройку - переименовывать Keyed - Done
+	Сделать  проверку родителей - если нет внешних зависимостей, то и искать не надо будет - Done
+	Сделать возможность уведомлений прерывающих прогу - Done
+	Сделать проверку на нахождение About, если нет, то проверить в родительской папке. - Done
+	Добавить labelKey в запрещенные части тэга - Done
+	добавить в список извлечения messageDefendersAttacking - Done
+	
 
 
 Update 1.5.7
+	
 	Added if need comps.CompApparelReloadable.cooldownGerund and comps.CompApparelReloadable.chargeNoun
 	For VEF_Abilities_AbilityDef added jobReportString and verbProperties.label
 	Added pawnSingular and leaderTitle into FactionDefs
-
-
-
-О, окей. Я могу добавить в DamageDef если нет deathMessage
-Если я правильно понимаю, что если нет чего-то нужного, то игра подставляет что-то стоковое, в репорте такое:
-<OuterRim_Blaster.deathMessage>{0} has been killed.</OuterRim_Blaster.deathMessage>
-
-добавить в список извлечения messageDefendersAttacking
 
 
 Update 1.5.6
     Fixed parent adding.
     Fixed the inability to read Xml files, as well as all similar files. (Idiots can't even write file extensions properly.)
 	
-	TODO: Переписать text2.py parent_folders
 
-
-	TODO: search XmlExtensions.FindMod by     <packageId>default = false</packageId>
-
-	F:\Games\steamapps\workshop\content\294100\3201536200
-	
-    TODO: Проверить Li_Class_Replace
-    TODO: Проверить FSFABE_Bionic_Implants_Brain.xml из [FSF] Advanced Bionics Expansion (добавил в тест)
 
 Update 1.5.3
     Fixed QuestScriptDef elements duplicates.

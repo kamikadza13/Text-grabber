@@ -1,95 +1,18 @@
 import copy
-import dataclasses
-from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Dict
-from xml.etree import ElementTree as et
-from xml.etree.ElementTree import Element
+from typing import Dict
 
+# from xml.etree import ElementTree as et
+# from xml.etree.ElementTree import Element
 from lxml import etree
-
-from GlobVars import mod_data
-
-
-@dataclass
-class SearchClass:
-    another_fold_ids: dict[str, Path] = dataclasses.field(default_factory=dict)
-
-    def __post_init__(self):
-        # Инициализируем списки при создании
-        self.another_fold_ids = {}
-
-
-
+from lxml.etree import _Element
+from printy import printy
 
 no_comment_parser = etree.XMLParser(remove_comments=True)
 
 
 
-sc = SearchClass({})
-
-def parent_folders(Mod_folder: str | None, Another_folder: str | None):
-
-    def searching_packageIds(failed_steam_id):
-        """Searching mod dep by id"""
-
-        if failed_steam_id:
-            print(f"Fail find steamID '{failed_steam_id}'. Try find by packageId")
-            print(f"Search by packageId finished")
-        if Another_folder is None or not Path(Another_folder).exists():
-            return
-        for f in Path(Another_folder).iterdir():
-            if not f.is_dir():
-                continue
-            if (f / 'About' / 'About.xml').exists():
-                with open(f / 'About' / 'About.xml', 'r', encoding="utf-8") as lf:
-                    tree = etree.parse(lf, parser=no_comment_parser)
-                root = tree.getroot()
-                for el in root:
-                    if str(el.tag).lower() == 'packageid':
-                        sc.another_fold_ids[str(el.tag).lower()] = f
-                        continue
-        for packageId in mod_data.modDependencies:
-            if packageId in sc.another_fold_ids:
-                np = Path(Another_folder) / packageId
-                if np.exists():
-                    parent_dict[packageId] = np
-
-    def searching_steam_id():
-        failed_steam_id = ''
-        for packageId, details in mod_data.modDependencies.items():
-            if details['steamID']:
-                np = Path(Mod_folder) / mod_data.modDependencies[packageId]['steamID']
-                if np.exists():
-                    parent_dict[packageId] = np
-                else:
-                    failed_steam_id = packageId
-
-            else:
-                failed_steam_id = packageId
-
-            if failed_steam_id:
-                print("Can't find steam folder:", str(Mod_folder), '/', str(mod_data.modDependencies[packageId]['steamID']))
-                searching_packageIds(failed_steam_id)
-
-
-
-    parent_dict = {}
-    """{ PackageID : Path }"""
-
-    if not Mod_folder:
-        if Another_folder and Path(Another_folder).exists():
-            searching_packageIds(None)
-        else:
-            return None
-    else:
-        searching_steam_id()
-
-    return parent_dict
-
-
-
-def adding_elems(current_elem_root: et.Element, parent_elem_root: et.Element, DEBUG_current_element=False, modify_original=False):
+def adding_elems(current_elem_root: _Element, parent_elem_root: _Element, DEBUG_current_element=False, modify_original=False):
 
     result_elem = current_elem_root if modify_original else copy.deepcopy(current_elem_root)
 
@@ -102,7 +25,7 @@ def adding_elems(current_elem_root: et.Element, parent_elem_root: et.Element, DE
 
     #   Добавлять будем к элементам родителя.
 
-    elems_by_tags: Dict[str, List[Element]] = {}
+    elems_by_tags: Dict[str, list[_Element]] = {}
 
 
 
@@ -117,17 +40,17 @@ def adding_elems(current_elem_root: et.Element, parent_elem_root: et.Element, DE
     if DEBUG_current_element:
 
         print("Current elem:")
-        et.dump(result_elem)
+        etree.dump(result_elem)
 
         print("Parent elem:")
-        et.dump(parent_elem_root)
+        etree.dump(parent_elem_root)
 
         print(elems_by_tags.keys())
         comps = elems_by_tags.get('comps')
         if comps:
             print('Parent Comps:')
             for a in comps[0]:
-                et.dump(a)
+                etree.dump(a)
 
 
     for e in result_elem:
@@ -144,12 +67,12 @@ def adding_elems(current_elem_root: et.Element, parent_elem_root: et.Element, DE
 
                 for li in e:
                     for idx, li_s in enumerate(elems_by_tags[e.tag][0]):
-
+                        li_s: _Element
                         if len(li.attrib) > 0 and li.attrib == li_s.attrib:
                             if DEBUG_current_element:
                                 print('Replaced:')
-                                et.dump(li_s)
-                                et.dump(li)
+                                etree.dump(li_s)
+                                etree.dump(li)
                             elems_by_tags[e.tag][0][idx] = li
                             break
                     else:
@@ -195,6 +118,8 @@ def adding_elems(current_elem_root: et.Element, parent_elem_root: et.Element, DE
 def find_parents_in_list_of_pathes(root_dir: list[Path]):
     """{name: elem}"""
 
+    processed_idx = 0
+    processed_parents_idx = 0
 
     final_parent_dict = {}  # Хранит финальные элементы с Name
     """{name: elem}"""
@@ -206,48 +131,56 @@ def find_parents_in_list_of_pathes(root_dir: list[Path]):
 
     for xml_path in root_dir:
         # try:
-        tree = et.parse(xml_path)
-        # tree = etree.parse(xml_path)
-        for elem in tree.iter():
-            if 'Name' not in elem.attrib:
-                continue
+            tree = etree.parse(xml_path)
+            elements = tree.xpath("//*[@Name]")
 
-            name = elem.attrib['Name']
 
-            if 'ParentName' not in elem.attrib:
-                final_parent_dict[name] = elem
-            else:
-                parent = elem.attrib.get('ParentName')
-                if parent in final_parent_dict:
+            for elem in elements:
 
 
 
-                    new_elem = add_elts_from_par(elem, final_parent_dict[parent], )
-                    final_parent_dict[name] = new_elem
+                try:
+                    if processed_idx % 10 == 0:
+                        printy(f"\r\tProcessed: {processed_parents_idx} Elements", 'b>', end='', )
+                    processed_idx += 1
+                except Exception:
+                    pass
+
+
+                name = elem.attrib['Name']
+                processed_parents_idx += 1
+
+                if 'ParentName' not in elem.attrib:
+                    final_parent_dict[name] = elem
                 else:
-                    if parent not in curr_parent_dict:
-                        curr_parent_dict[name] = {'parent': elem.attrib.get('ParentName'),
-                                                  'elem': elem}
-                    else:
-                        'Проверка нашелся ли уже финальный родитель у родителя текущего элемента'
-                        par_name = curr_parent_dict[parent]['parent']
-                        if par_name in final_parent_dict:
-                            'Нашелся финальный родитель у родителя. Добавление Родителя par_name в финальный словарь'
-                            new_elem = add_elts_from_par(curr_parent_dict.pop(parent)['elem'], final_parent_dict[par_name])
-                            final_parent_dict[parent] = new_elem
-                            'Добавление name в финальный словарь'
-                            new_elem = add_elts_from_par(elem, final_parent_dict[par_name])
-                            final_parent_dict[name] = new_elem
+                    parent = elem.attrib.get('ParentName')
+                    if parent in final_parent_dict:
 
-                        else:
-                            'Финального родителя у родителя текущего элемента нет'
+                        new_elem = add_elts_from_par(elem, final_parent_dict[parent], )
+                        final_parent_dict[name] = new_elem
+                    else:
+                        if parent not in curr_parent_dict:
                             curr_parent_dict[name] = {'parent': elem.attrib.get('ParentName'),
                                                       'elem': elem}
+                        else:
+                            'Проверка нашелся ли уже финальный родитель у родителя текущего элемента'
+                            par_name = curr_parent_dict[parent]['parent']
+                            if par_name in final_parent_dict:
+                                'Нашелся финальный родитель у родителя. Добавление Родителя par_name в финальный словарь'
+                                new_elem = add_elts_from_par(curr_parent_dict.pop(parent)['elem'], final_parent_dict[par_name])
+                                final_parent_dict[parent] = new_elem
+                                'Добавление name в финальный словарь'
+                                new_elem = add_elts_from_par(elem, final_parent_dict[par_name])
+                                final_parent_dict[name] = new_elem
+
+                            else:
+                                'Финального родителя у родителя текущего элемента нет'
+                                curr_parent_dict[name] = {'parent': elem.attrib.get('ParentName'),
+                                                          'elem': elem}
         # except Exception as e:
-        #     print(f"Error processing {xml_path}: {e}")
+        #     Error_log.append(f"\nError processing {xml_path}: {e}")
 
-
-
+    printy(f"\r\tProcessed: {processed_parents_idx} parents among {processed_idx} Elements", 'b>', end='', )
 
     def updating_parent_final_list():
         iteration_count = 0  # Счётчик итераций для защиты от бесконечных циклов
@@ -311,7 +244,7 @@ def find_parents_in_list_of_pathes(root_dir: list[Path]):
 
     return final_parent_dict
 
-def add_elts_from_par(current_root: etree.Element, parent_root: etree.Element, DEBUG_current_element=False, change_current_bool=False, ):
+def add_elts_from_par(current_root: _Element, parent_root: _Element, DEBUG_current_element=False, change_current_bool=False, ):
     if type(current_root) is not type(parent_root):
         print(type(current_root))
         print(type(parent_root))
@@ -339,8 +272,9 @@ def add_elts_from_par(current_root: etree.Element, parent_root: etree.Element, D
         return new_elem
     except Exception as ex:
         print("Error add_elts_from_parent")
-        et.dump(parent_root)
-        et.dump(current_root)
+        etree.dump(parent_root)
+        etree.dump(current_root)
+        input()
 
 
 

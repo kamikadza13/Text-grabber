@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from xml import etree
 
 from lxml import etree as ET
 
@@ -34,7 +35,7 @@ def find_patches_with_text(patches_list: dict[Path, Path], Tags_to_extraction: l
                     root.remove(operation)
             if not root.getchildren():
                 continue
-            elif all([a.tag is ET.Comment for a in root]):
+            elif all([isinstance(a, etree._Comment) for a in root]):
                 # ET.dump(root)
                 # print("Комментарии")
                 continue

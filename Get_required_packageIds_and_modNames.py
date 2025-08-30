@@ -4,10 +4,10 @@ from lxml import etree
 from printy import printy
 
 from Get_database_by_list_of_pathes_of_mods import MultiIndexDict
+from GlobFunc import escape_printy_string
 from GlobVars import mod_data
-from Text_Grabber import escape_printy_string
 
-DEBUG = True
+DEBUG = False
 
 
 def get_modDependencies():
@@ -15,7 +15,7 @@ def get_modDependencies():
     printy('\t\t\tAbout.xml modDependencies Required mods:', '<o')
 
     for package_id in mod_data.modDependencies:
-        name = mod_data.modDependencies[package_id].get('displayName')
+        name = mod_data.modDependencies[package_id]
         if name is not None:
             printy(f'\t\t\t\t{escape_printy_string(name):^30}|{package_id}', 'o>')
             id_and_names.append((package_id, name))
@@ -117,6 +117,16 @@ def search_in_database_by_part_find(database, iid, search_name):
 
 
 def get_loadFolders():
+
+    try:
+        lf_path: Path = Path('LoadFolders.xml')
+        if not lf_path.exists():
+            return None
+
+    except Exception as ex:
+        return None
+
+
     try:
         tree = etree.parse('LoadFolders.xml')
         return list(set(
@@ -146,7 +156,10 @@ def get_may_require_values(path:Path):
         return None
 
 
-def main(database: MultiIndexDict):
+def get_required_packageIds_and_modNames_func(database: MultiIndexDict):
+
+
+
     parent_pathes: list[Path] = []
     founded_ids = []
     founded_names = []

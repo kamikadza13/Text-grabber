@@ -153,6 +153,7 @@ ScenPart_='''
     Delete_old_versions_translation: bool = True
     Merge_folders: bool = True
     Not_rename_files: bool = False
+    Not_rename_Keyed: bool = False
 
     Copy_original_patches: bool = False
     Check_update: bool = True
@@ -255,6 +256,7 @@ ScenPart_='''
             'Delete_old_versions_translation': True,
             'Merge_folders': True,
             'Not_rename_files': False,
+            'Not_rename_Keyed': False,
             'Copy_original_patches': False,
             # Other
             'Check_update': True,
@@ -333,6 +335,7 @@ ScenPart_='''
     no_text_check_label_list = [
         'label.slateref',
         'text.slateref',
+        'value.slateRef',
         'customletterlabel.slateref',
         'customlettertext.slateref',  # 'Здесь все ок, именно в Tags_to_extraction'
         'messageDefendersAttacking',
@@ -513,6 +516,15 @@ def updating_settings():
 
     SVV.set('Tkey_system_on', False)
 
+
+    if 'labelKey'.lower() not in SVV.Forbidden_part_of_tag:
+        print('labelKey', 'not in Forbidden_part_of_tag, adding...')
+        try:
+            SVV.Forbidden_part_of_tag.append('labelKey')
+
+            add_line_in_text_file(SVV.SettingsPath.SettingsPath_AppData / SVV.SettingsPath.Forbidden_part_of_tag, 'labelKey')
+        except Exception as ex:
+            print(ex)
 
 
     for string in SVV.no_text_check_label_list:

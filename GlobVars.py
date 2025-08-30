@@ -6,6 +6,15 @@ from typing import Dict, Tuple, List
 
 from lxml import etree
 
+Error_log = []
+
+
+@dataclass
+class QueueData:
+    ''
+
+    new_Fullpath = ''
+    "change_to_mod_dir"
 
 @dataclass
 class ModData:
@@ -17,11 +26,7 @@ class ModData:
     description = 'Default description'
 
     modDependencies: dict = dataclasses.field(default_factory=dict)
-    """dependence_dict[packageId]=
-               {'displayName': displayName,
-                'steamWorkshopUrl': steamWorkshopUrl,
-                'downloadUrl': downloadUrl,
-                'steamID': steamID}"""
+    """dependence_dict{'packageId'; displayName}"""
     loadafter_list: list = dataclasses.field(default_factory=list)
     max_version = 'v1.5'
     max_version_by_folders = '0.1'
@@ -88,5 +93,5 @@ state = AppState()
 mod_data = ModData()
 folders = A1()
 tf = TranslatingFiles()
-
+queueData = QueueData()
 

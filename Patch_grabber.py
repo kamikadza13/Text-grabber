@@ -1,5 +1,4 @@
 import copy
-import json
 import os
 import re
 from dataclasses import dataclass
@@ -12,8 +11,11 @@ import lxml.etree as etree
 from lxml.etree import Element, _Element
 from printy import printy
 
-from GlobFunc import xml_get_text
+from Get_database_by_list_of_pathes_of_mods import MultiIndexDict
+from Get_required_packageIds_and_modNames import search_in_database_by_name, search_in_database_by_fuzzyname, search_in_database_by_part_find
+from GlobFunc import xml_get_text, error_handler
 from GlobVars import state
+from Settings_module import SVV as S
 
 DEBUG_mode = False
 @dataclass
@@ -45,23 +47,6 @@ class Pp:
 
 
 
-@dataclass
-class Reqmod:
-    steamId: str = None
-    name: str = None
-    steamName: str = None
-    packageId: str = None
-    last_v: list = None
-
-    def __lt__(self, other):
-        if not isinstance(other, Reqmod):
-            return NotImplemented
-
-        # Обрабатываем None как пустой список
-        self_ver = self.last_v or []
-        other_ver = other.last_v or []
-
-        return self_ver < other_ver
 
 founded_mods_by_name = {
     'Core': 'Ludeon.RimWorld',
@@ -130,16 +115,10 @@ founded_mods_by_name = {
 
 
 
-def search_mod_id_by_name(data, modNamed_set: set[str]):
+@error_handler(error_text='Fail to find mod id by name', add_in_log=False)
+def search_mod_id_by_name(modNamed_set: set[str], db:MultiIndexDict):
 
-    if not modNamed_set:
-        return []
-
-    founded_ids_list = []
-    founded_modname_not_founded_id_list = []
-
-    modname_list = list(modNamed_set)
-
+    @error_handler(add_in_log=False)
     def founded_mods_by_name_func(modname_list):
 
         remove_list = []
@@ -153,75 +132,50 @@ def search_mod_id_by_name(data, modNamed_set: set[str]):
             modname_list.remove(r)
         return modname_list
 
-    modname_list = founded_mods_by_name_func(modname_list)
-    if not modname_list:
+    @error_handler(add_in_log=False)
+    def find_ids_by_name_in_list(db:MultiIndexDict, updated_modname_list:list):
+        adding_list = []
+        for mn in updated_modname_list:
+            try:
+                results = search_in_database_by_name(db, 00000000, mn)
+                if results is None:
+                    results = search_in_database_by_fuzzyname(db, 00000000, mn)
+                    if results is None:
+                        results = search_in_database_by_part_find(db, 00000000, mn)
+
+                if results:
+                    packageid = results[0]['packageid']
+                    adding_list.append(packageid)
+            except Exception as ex:
+                print(ex)
+        return adding_list
+
+    if not modNamed_set:
+        return []
+
+    founded_ids_list = []
+    founded_modname_not_founded_id_list = []
+
+    modname_list = list(modNamed_set)
+    updated_modname_list = founded_mods_by_name_func(modname_list)
+    if not updated_modname_list:
         return founded_ids_list
 
-    def get_dict_elems_by_name(mod_list):
-
-        def parse_version(version_str):
-            # Извлекаем основную часть (до первого пробела)
-            clean_version = version_str.split()[0]
-            # Разбиваем на компоненты по точкам
-            parts = clean_version.split('.')
-            # Конвертируем каждую часть в число
-            return [int(part) for part in parts]
+    new_ids = find_ids_by_name_in_list(db, updated_modname_list)
+    founded_ids_list.extend(new_ids)
 
 
 
-        if DEBUG_mode:
-            print('Searching:', mod_list)
-        results = {a: [] for a in mod_list}
-
-        for mod_id_elem in data['database']:
-            """mod_id_elem like 1274936357"""
-            # print(mod_id_elem)
-            # try:
-
-            name = data['database'][mod_id_elem].get('name')
-            steamName = data['database'][mod_id_elem].get('steamName')
-            if name in mod_list or steamName in mod_list:
-                packageId = data['database'][mod_id_elem].get('packageId')
-                gameVersions = data['database'][mod_id_elem].get('gameVersions')
-                if gameVersions:
-                    last_v = parse_version(max(gameVersions, key=parse_version))
-                else:
-                    last_v = None
-                req = Reqmod(steamId=mod_id_elem, name=name, steamName=steamName, packageId=packageId, last_v=last_v)
-                if DEBUG_mode:
-                    print('req', req)
-                    print('results:', results)
-                if name in results:
-                    results[name].append(req)
-                else:
-                    results[steamName].append(req)
-
-            # except Exception as ex:
-            #     print(ex, 'Error finding name/stamname in', mod_id_elem)
-            #     continue
-        return results
-
-    elems_by_name_from_database = get_dict_elems_by_name(modname_list)
 
 
-    for searching_mod_name in elems_by_name_from_database:
-
-        if elems_by_name_from_database[searching_mod_name]:
-            "Поиск среди результатов элемента с самой последней версией и получение его packageId"
-
-            maxv_elem = max(elems_by_name_from_database[searching_mod_name]) # type: Reqmod
-            packageId = getattr(maxv_elem, 'packageId')
-            if packageId:
-                if DEBUG_mode:
-                    pprint(elems_by_name_from_database[searching_mod_name], width=120)
-
-                founded_ids_list.append(packageId)
-                continue
-            founded_modname_not_founded_id_list.append(maxv_elem)
     if DEBUG_mode:
         pprint(founded_modname_not_founded_id_list)
     # TODO: founded_modname_not_founded_id_list сделать по нему поиск когда-нибудь
+
     return  founded_ids_list
+
+
+
 
 
 sabaka_names_all_patch_grabber = []
@@ -233,7 +187,7 @@ patches_file_count = 0
 
 
 
-def main(folder_required_mods: Tuple, patches_folder=Path('.'), tags_to_extract=None, database_path=None):
+def main(folder_required_mods: Tuple, patches_folder=Path('.'), database=None):
     """
     Return Keyed dict with list of strings: Dict[Path, List[str]]
         {Path: [<Elem1>, <Elem2>]}
@@ -253,14 +207,6 @@ def main(folder_required_mods: Tuple, patches_folder=Path('.'), tags_to_extract=
     SS.req_modsID_list.extend(folder_required_mods)
     '''Моды для всей папки с патчами'''
 
-
-
-    # database_path = r'D:\Games\steamapps\workshop\content\294100\1847679158\db\db.json'
-    with open(database_path, encoding='utf-8') as f:
-        data: Dict[str, Dict] = json.load(f)
-
-
-    list_of_extract_tags_patch_grabber = [ll.strip("\n ") for ll in tags_to_extract]
 
     sibling_list_patch_grabber = []
 
@@ -387,7 +333,7 @@ def main(folder_required_mods: Tuple, patches_folder=Path('.'), tags_to_extract=
 
 
             elem_string = etree.tostring(value, encoding=str, pretty_print=True, with_tail=False)
-            if not any([a in elem_string for a in list_of_extract_tags_patch_grabber]):
+            if not any([a in elem_string.lower() for a in S.Tags_to_extraction]):
                 return None
 
 
@@ -523,7 +469,6 @@ def main(folder_required_mods: Tuple, patches_folder=Path('.'), tags_to_extract=
                     operation_selector(a1)
 
 
-
         def PatchOperationFindMod(operation_Class_PatchOperationFindMod: _Element):
 
             New_mods = []
@@ -564,11 +509,16 @@ def main(folder_required_mods: Tuple, patches_folder=Path('.'), tags_to_extract=
                                         mods_names_list.append(li.text)
 
                                 if mods_names_list:
-                                    print("\tPatch FindMods:", mods_names_list)
-                                    modIds = set(search_mod_id_by_name(data, set(mods_names_list)))
-                                    if modIds:
-                                        New_mods.extend(modIds)
-                                        SS.req_modsID_list.extend(modIds)
+                                    #   TODO: Проверить здесь
+                                    try:
+                                        print("\tPatch FindMods:", mods_names_list)
+                                        modIds = set(search_mod_id_by_name(set(mods_names_list), database))
+
+                                        if modIds:
+                                            New_mods.extend(modIds)
+                                            SS.req_modsID_list.extend(modIds)
+                                    except Exception as ex:
+                                        print(ex)
                                 # print(mod_name)
                             case "match":
                                 operation_selector(ch)

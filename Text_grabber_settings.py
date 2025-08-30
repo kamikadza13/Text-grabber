@@ -246,15 +246,16 @@ class GeneralFrame(Frame):
                     f1.Label['text'] = _("Rimworld Data:\nNone")
                     Messagebox.show_warning(message=_('Folder Not selected'), parent=self.app, position=(300, 300))
                     SV.set('Path_to_Data', SV.Path_to_Data)
-                    f1.Label['text'] = _("Rimworld Data:\n{Path_to_Data}").format(Path_to_Data=SV.Path_to_Data)
+                    return
                 else:
                     path = Path(a)
                     if path.name != 'Data':
                         SV.Path_to_Data = None
                         f1.Label['text'] = _("Rimworld Data:\nNone")
-                        Messagebox.show_warning(message=_('Folder Not selected - Selected path is not Data folder'), parent=self.app, position=(300, 300))
+                        Messagebox.show_warning(title=_('Folder Not selected'), message=_('Selected path is not Data folder'), parent=self.app, position=(300, 300))
                         SV.set('Path_to_Data', SV.Path_to_Data)
-                        f1.Label['text'] = _("Rimworld Data:\n{Path_to_Data}").format(Path_to_Data=SV.Path_to_Data)
+                        return
+
 
                 SV.Path_to_Data = str(Path(a))
                 SV.set('Path_to_Data', SV.Path_to_Data)
@@ -339,6 +340,13 @@ class GeneralFrame(Frame):
                            'Not_rename_files',
                            tooltip_text=_("Files are automatically renamed depending on the folders they fall into. This is necessary to prevent the files from having the same names, which may lead to the fact that the game will not read the translation files.\n(Check the box if you don't like it and you want to keep the original titles)"
                                           )
+                           ).pack(anchor=tk.W, pady=(10, 0))
+
+            NewCheckButton(F,
+                           _("Not rename Keyed"),
+                           SV.Not_rename_Keyed,
+                           'Not_rename_Keyed',
+                           tooltip_text=_('Do not rename "Keyed" files')
                            ).pack(anchor=tk.W, pady=(10, 0))
 
             NewCheckButton(F,

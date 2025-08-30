@@ -3,11 +3,14 @@ import html
 import re
 from dataclasses import dataclass
 from re import match
-# from xml import etree as ET
-from xml.etree import ElementTree as ET
 
-from printy import escape as p_escape
+# # from xml import etree as ET
+# from xml.etree import ElementTree as ET
+from lxml import etree as ET, etree
+from lxml.etree import _Element, _Comment
 
+from GlobFunc import error_handler
+from GlobVars import Error_log
 from Settings_module import SVV as S
 
 tag_endwith_skip = ['\\nodes\\Set\\name', ]
@@ -15,10 +18,6 @@ text_startwith_skip = ['RGB', r'\$', ]
 ruleFiles_list = {}
 
 debug_print_bool = False
-
-def escape_printy_string(string):
-    return p_escape(str(string))
-
 
 
 
@@ -31,15 +30,13 @@ class FolderDefnamePathText:
     text: str
 
 
-Error_log = []
-
 @dataclass
 class ExitList:
     fdpt: list[FolderDefnamePathText]
     keyed: list
 
 
-def RulePackDef_def(rulePackDef: ET.Element):
+def RulePackDef_def(rulePackDef: _Element):
     global ruleFiles_list
     defName_ET = rulePackDef.find('defName')
     if defName_ET is not None:
@@ -50,6 +47,8 @@ def RulePackDef_def(rulePackDef: ET.Element):
     if rulesFiles_ET:
         rulesFiles_ET = rulesFiles_ET[0]
         for li in rulesFiles_ET:
+            if isinstance(li, _Comment):
+                continue
             a = li.text
             b = a.partition("-")[0]
             if not ruleFiles_list.get(defname):
@@ -61,6 +60,8 @@ def RulePackDef_def(rulePackDef: ET.Element):
     if include_ET:
         include_ET = include_ET[0]
         for li in include_ET:
+            if isinstance(li, _Comment):
+                continue
             include.append(li.text)
 
     rulesStrings_ET = list(rulePackDef.iter('rulesStrings'))
@@ -68,43 +69,52 @@ def RulePackDef_def(rulePackDef: ET.Element):
         rulesStrings_ET = rulesStrings_ET[0]
     if include:
         if not rulesFiles_ET:
-            rulesFiles = ET.Element('rulesFiles')
+            rulesFiles = etree.Element('rulesFiles')
         else:
             rulesFiles = rulesFiles_ET
         rulePackDef.insert(1, rulesFiles)
 
-        if not rulesStrings_ET:
+        if rulesStrings_ET is not None:
             rulesStrings_ET = ET.SubElement(rulePackDef, 'rulesStrings')
         for defname_ in include:
             if defname_ in ruleFiles_list:
                 for line in ruleFiles_list[defname_]:
+
                     if f'[{line[0]}]'.encode() in ET.tostring(rulesStrings_ET, method='xml'):
                         rulesFiles.append(copy.deepcopy(line[1]))
 
 
-def BodyDef_rename_li(BodyDef: ET.Element):
-    def parts_li_tag_rename(el: ET.Element):
+def BodyDef_rename_li(BodyDef: _Element):
+    def parts_li_tag_rename(el: _Element):
         parts = el.find('parts')
         if parts is not None:
-            for li in parts:
+
+            for idx, li in enumerate(parts):
                 customLabel = li.find('customLabel')
                 if customLabel is not None:
                     if customLabel.text is not None:
-                        li.tag = customLabel.text.replace(" ", "_").replace("-", "")
+                        try:
+                            li.tag = customLabel.text.replace(" ", "_").replace("-", "")
+
+                        except ValueError:
+                            li.tag = 'LI_REPLACE_NUMBER' + str(idx)
+
                 parts_li_tag_rename(li)
+
+
 
     corePart = BodyDef.find('corePart')
     if corePart is not None:
         parts_li_tag_rename(corePart)
 
 
-def pawnKind_add_strings(elem: ET.Element):
+def pawnKind_add_strings(elem: _Element):
     add_elem = []
-    a: list[ET.Element] = []
+    a: list[_Element] = []
     b = elem.find('lifeStages')
     orig_label_text = ''
 
-    def get_label(elem_to_get_label: ET.Element):
+    def get_label(elem_to_get_label: _Element):
         _ = elem_to_get_label.find('label')
         if _ is not None:
             return str(elem.find('label').text)
@@ -112,6 +122,8 @@ def pawnKind_add_strings(elem: ET.Element):
 
     if b is not None:
         for li in b:
+            if isinstance(li, _Comment):
+                continue
             if li is not None:
                 a.append(li)
     orig_label_text = get_label(elem)
@@ -121,7 +133,7 @@ def pawnKind_add_strings(elem: ET.Element):
             label_text = orig_label_text
         if label_text:
             for idx_, l_pawn in enumerate(S.get_plural_list()):
-                add_elem.append(ET.Element(l_pawn))
+                add_elem.append(etree.Element(l_pawn))
                 if els.find(l_pawn) is None:
                     els.append(add_elem[idx_])
                     txt = str(l_pawn.partition("label")[2])
@@ -131,7 +143,7 @@ def pawnKind_add_strings(elem: ET.Element):
                     add_elem[idx_].text = txt + " " + label_text
 
 
-def ScenarioDef_add_strings(elem: ET.Element):
+def ScenarioDef_add_strings(elem: _Element):
     if elem.find('scenario') is not None:
         scenario = elem.find('scenario')
         # print(f"Есть ветка scenario")
@@ -157,7 +169,7 @@ def ScenarioDef_add_strings(elem: ET.Element):
             scenario.append(description)
 
 
-def DamageDef_add_strings(elem: ET.Element):
+def DamageDef_add_strings(elem: _Element):
     if elem.find("deathMessage") is None:
         deathMessage = ET.SubElement(elem, "deathMessage")
         a_00 = elem.get('ParentName')
@@ -200,7 +212,7 @@ def DamageDef_add_strings(elem: ET.Element):
                     deathMessage.text = "{0} has been killed."
 
 
-# def comps_Li_Class_Replace(Def: ET.Element):
+# def comps_Li_Class_Replace(Def: _Element):
 #     comps = Def.find("comps")
 #     if comps is not None:
 #         for li in comps:
@@ -212,13 +224,17 @@ def DamageDef_add_strings(elem: ET.Element):
 #                 if li.get("Class") is not None:
 #                     li.set('Class', "Li_Class_Replaced_by_compClass")
 
-def translate_ThingDef_tools(el1: ET.Element):
+def translate_ThingDef_tools(el1: _Element):
     """tools.0"""
     if S.Translate_tools_into_russian:
         tools = el1.find("tools")
         if tools is not None:
             for li in tools:
+                if isinstance(li, _Comment):
+                    continue
                 for t in li:
+                    if isinstance(t, _Comment):
+                        continue
                     if t.tag == 'label':
                         match t.text.lower():
                             case "stock":
@@ -419,7 +435,7 @@ def translate_ThingDef_tools(el1: ET.Element):
                                 t.text = "хвостовое копьё"
 
 
-def add_missing_verbs_if_verbClass(Def: ET.Element):
+def add_missing_verbs_if_verbClass(Def: _Element):
     """Verb_Shoot
     VerbClass"""
     verbs = Def.find("verbs")
@@ -465,7 +481,7 @@ def add_missing_verbs_if_verbClass(Def: ET.Element):
 
 
 
-def ThingDef_add_strings(elem: ET.Element):
+def ThingDef_add_strings(elem: _Element):
     if S.Add_stuffAdjective_and_mark_it:
 
         stuffProps = elem.find("stuffProps")
@@ -486,7 +502,7 @@ def ThingDef_add_strings(elem: ET.Element):
                     a.text = S.Add_stuffAdjective_and_mark_it_text.replace('~LABEL~', orig_text)
 
 
-def add_title_short(Def: ET.Element):
+def add_title_short(Def: _Element):
     backstory = Def.find("backstory")
     if backstory is None:
         backstory = ET.SubElement(Def, 'backstory')
@@ -577,43 +593,93 @@ def add_title_short(Def: ET.Element):
                 backstory_titleShortFemale.text = titleShortFemale.text
 
 
-def BackstoryDef_add_title_short(Def: ET.Element):
-    if S.add_titleFemale:
-        titleFemale = Def.find('titleFemale')
-        if titleFemale is None:
-            title = Def.find('title')
-            if title is not None:
-                titleFemale = ET.SubElement(Def, 'titleFemale')
-                titleFemale.text = title.text
+def get_index_of_children(Def: _Element,l: _Element):
+    children = list(Def)
 
-    if S.add_titleShortFemale:
-        titleShortFemale = Def.find('titleShortFemale')
-        if titleShortFemale is None:
-            titleShort = Def.find("titleShort")
-            if titleShort is not None:
-                titleShortFemale = ET.SubElement(Def, 'titleShortFemale')
-                titleShortFemale.text = titleShort.text
+    try:
+        target_index = children.index(l)
+    except ValueError:
+        # Если целевой элемент не найден, добавляем новый элемент в конец
+        target_index = -2
+    return target_index
+
+
+
+@error_handler(error_text="Error: add_title_short")
+def BackstoryDef_add_title_short(Def: _Element):
+
+
+
+    @error_handler(error_text="Error: add_titleFemale")
+    def add_titleFemale():
+        if S.add_titleFemale:
+            titleFemale = Def.find('titleFemale')
+            if titleFemale is None:
+                title = Def.find('title')
+                if title is not None:
+                    titleFemale = etree.Element('titleFemale')
+                    titleFemale.text = title.text
+                    Def.insert(get_index_of_children(Def, title) + 1, titleFemale)
+
+    add_titleFemale()
+
+
+    @error_handler(error_text="Error: add_titleShortFemale")
+    def add_titleShortFemale():
+        if S.add_titleShortFemale:
+            titleShortFemale = Def.find('titleShortFemale')
+            if titleShortFemale is None:
+                titleShort = Def.find("titleShort")
+                if titleShort is not None:
+                    titleShortFemale = etree.Element('titleShortFemale')
+                    titleShortFemale.text = titleShort.text
+                    Def.insert(get_index_of_children(Def, titleShort) + 1, titleShortFemale)
+
+
             else:
                 title = Def.find('title')
                 if title is not None:
-                    titleShortFemale = ET.SubElement(Def, 'titleShortFemale')
+                    titleShortFemale = etree.Element('titleShortFemale')
                     if len(title.text) < 13:
                         titleShortFemale.text = title.text
                     else:
                         titleShortFemale.text = title.text[:12]
 
+                    Def.insert(get_index_of_children(Def, title) + 1, titleShortFemale)
 
-def TraitDef_add_strings(elem: ET.Element):
+    add_titleShortFemale()
+
+@error_handler(error_text="Error: backstoryDef baseDesc")
+def backstoryDef_baseDesc_to_description(Def):
+    baseDesc = Def.find('baseDesc')
+    if baseDesc is None:
+        return
+
+    description = Def.find('description')
+    if description is not None:
+        return
+
+    description = etree.Element('description')
+    description.text = baseDesc.text
+    Def.insert(get_index_of_children(Def, baseDesc) + 1, description)
+
+
+
+
+def TraitDef_add_strings(elem: _Element):
     if elem.find("degreeDatas") is not None:
         degreeDatas = elem.find('degreeDatas')
         for li in degreeDatas:
+            if isinstance(li, _Comment):
+                continue
+
             if li.find("labelFemale") is None:
                 if li.find("label") is not None:
                     labelFemale = ET.SubElement(li, "labelFemale")
                     labelFemale.text = li.find("label").text
 
 
-def Tkey_system_QuestScriptDef(elem: ET.Element):
+def Tkey_system_QuestScriptDef(elem: _Element):
     for element in elem.iter():
         if 'TKey' in element.attrib:
             TKey = ET.SubElement(elem, element.attrib['TKey'])
@@ -622,7 +688,7 @@ def Tkey_system_QuestScriptDef(elem: ET.Element):
             element.clear()
 
 
-def replace_child_li(parent: ET.Element):
+def replace_child_li(parent: _Element):
     def zamena_v_li_classe(li_class_name_: str):
         new_tag_ = ""
 
@@ -642,7 +708,7 @@ def replace_child_li(parent: ET.Element):
                 new_tag_ = "li"
         return new_tag_
 
-    def li_new_tag_by_child(li_: ET.Element) -> str:
+    def li_new_tag_by_child(li_: _Element) -> str:
         for child_ in li_:
             if child_.tag == 'def' and child_.text is not None:
                 return child_.text.replace(" ", "_")
@@ -658,6 +724,7 @@ def replace_child_li(parent: ET.Element):
         # print("Изначальный элемент без земененных <li>")
         # ET.dump(parent)
         for idx3, li in enumerate(element2):
+            li: _Element
             new_tag = li_new_tag_by_child(li)
 
             if new_tag == "li":
@@ -668,17 +735,22 @@ def replace_child_li(parent: ET.Element):
                     new_tag = str(idx3)
             new_tag = new_tag.replace(" ", "_").replace("-", "")
 
-            li.tag = new_tag
+            try:
+                li.tag = new_tag
+            except ValueError:
+                li.tag = 'LI_REPLACE_NUMBER' + new_tag
         # print("--Итоговый элемент с заменненными <li>--")
         # ET.dump(parent)
 
 
-def replace_rulestring(parent: ET.Element):
+def replace_rulestring(parent: _Element):
     # ET.dump(parent)
     text = "\n"
     a_0 = "\t\t<li>"
     b = "</li>\n"
     for li in parent:
+        if isinstance(li, _Comment):
+            continue
         if li.tag == "li":
             text += a_0 + li.text + b
     text += S.tags_left_spacing_dict[S.tags_left_spacing]
@@ -686,7 +758,7 @@ def replace_rulestring(parent: ET.Element):
     parent.text = text
 
 
-def XmlExtensions_SettingsMenuDef(elem: ET.Element):
+def XmlExtensions_SettingsMenuDef(elem: _Element):
     settings = elem.find("settings")
     if settings is not None:
         for element in settings.iter():
@@ -695,8 +767,8 @@ def XmlExtensions_SettingsMenuDef(elem: ET.Element):
                 tKey_text = ''
                 tKeyTip = ''
                 tKeyTip_text = ''
-                tKey_tag_text_el: list[ET.Element] = []
-                tKeyTip_tag_text_el: list[ET.Element] = []
+                tKey_tag_text_el: list[_Element] = []
+                tKeyTip_tag_text_el: list[_Element] = []
                 for el in element:
                     match el.tag:
                         case 'tKey':
@@ -728,12 +800,14 @@ def XmlExtensions_SettingsMenuDef(elem: ET.Element):
                     ExitList.keyed.append((tKeyTip, html.escape(tKeyTip_text)))
 
 
-def ThingDef_MVCF_Comps_CompProperties_VerbProps(elem: ET.Element):
+def ThingDef_MVCF_Comps_CompProperties_VerbProps(elem: _Element):
     comps = elem.find("comps")
     if comps is not None:
 
 
         for li in comps:
+            if isinstance(li, _Comment):
+                continue
             compClass = li.find("compClass")
             if compClass is not None:
                 compClass = compClass.text
@@ -747,7 +821,7 @@ def ThingDef_MVCF_Comps_CompProperties_VerbProps(elem: ET.Element):
                         li.append(verbProps)
 
 
-def find_defname(child_: ET.Element):
+def find_defname(child_: _Element):
     # warning(f"Search Defname in {child.tag}")
     # ET.dump(child_)
 
@@ -764,12 +838,12 @@ def find_defname(child_: ET.Element):
     return defname_tag
 
 
-def QuestScript_def_(QuestScriptDef: ET.Element):
+def QuestScript_def_(QuestScriptDef: _Element):
 
-    def quest_node_sequence(sequence_elem: ET.Element):
+    def quest_node_sequence(sequence_elem: _Element):
         @dataclass
         class Elem_count:
-            first_elem: ET.Element
+            first_elem: _Element
             count: int
             is_modified = False
 
@@ -784,17 +858,30 @@ def QuestScript_def_(QuestScriptDef: ET.Element):
         if nodes is None:
             return
         for idx, li in enumerate(nodes):
-            if 'Class' not in li.attrib:
-                li.tag = str(idx)
+            if isinstance(li, _Comment):
                 continue
+            if 'Class' not in li.attrib:
+                try:
+                    li.tag = str(idx)
+                except ValueError:
+                    li.tag = 'LI_REPLACE_NUMBER' + str(idx)
 
+                continue
             class_name = li.attrib['Class']
             match class_name:
                 case str(text) if '.' in text:
-                    li.tag = str(idx)
+                    try:
+                        li.tag = str(idx)
+                    except ValueError:
+                        li.tag = 'LI_REPLACE_NUMBER' + str(idx)
+
                     continue
                 case 'QuestNode_SubScript':
-                    li.tag = str(idx)
+                    try:
+                        li.tag = str(idx)
+                    except ValueError:
+                        li.tag = 'LI_REPLACE_NUMBER' + str(idx)
+
                     continue
 
                 case 'QuestNode_Signal':
@@ -806,10 +893,18 @@ def QuestScript_def_(QuestScriptDef: ET.Element):
                             continue
 
                         else:
-                            li.tag = str(idx)
+                            try:
+                                li.tag = str(idx)
+                            except ValueError:
+                                li.tag = 'LI_REPLACE_NUMBER' + str(idx)
+
                             continue
                     else:
-                        li.tag = str(idx)
+                        try:
+                            li.tag = str(idx)
+                        except ValueError:
+                            li.tag = 'LI_REPLACE_NUMBER' + str(idx)
+
                         continue
 
                 case 'QuestNode_Set':
@@ -819,7 +914,11 @@ def QuestScript_def_(QuestScriptDef: ET.Element):
                     value = li.find('value')
                     if value is not None:
                         value.clear()
-                    li.tag = str(idx)
+                    try:
+                        li.tag = str(idx)
+                    except ValueError:
+                        li.tag = 'LI_REPLACE_NUMBER' + str(idx)
+
                     continue
 
                 case _:
@@ -828,7 +927,11 @@ def QuestScript_def_(QuestScriptDef: ET.Element):
 
             tag_name = class_name.split('QuestNode_')[-1]
             if len(tag_name) < 2:
-                li.tag = str(idx)
+                try:
+                    li.tag = str(idx)
+                except ValueError:
+                    li.tag = 'LI_REPLACE_NUMBER' + str(idx)
+
                 continue
             if tagname_dict.get(tag_name, None) is not None:
                 tagname_dict[tag_name].count += 1
@@ -837,22 +940,39 @@ def QuestScript_def_(QuestScriptDef: ET.Element):
 
             else:
                 tagname_dict[tag_name] = Elem_count(li, 0)
-                li.tag = tag_name
+
+                try:
+                    li.tag = tag_name
+                except ValueError:
+                    li.tag = 'LI_REPLACE_NUMBER' + tag_name
 
 
 
-    def makeSlateRef(el: ET.Element):
+    @error_handler(error_text='QuestScriptDef label/text/customLetterLabel/customLetterText error')
+    def makeSlateRef(el: _Element):
         textList = [el.find('label'), el.find('text'), el.find('customLetterLabel'), el.find('customLetterText')]
 
         for l in textList:
+
             if l is not None:
+
+                value_elem = etree.Element(l.tag + '.value.slateRef')
+                value_elem.text = copy.copy(l.text)
+                children = list(el)
+                try:
+                    target_index = children.index(l)
+                except ValueError:
+                    # Если целевой элемент не найден, добавляем новый элемент в конец
+                    target_index = -2
+
+                el.insert(target_index + 1, value_elem)
+
+
+                # value_elem = ET.SubElement(el, l.tag + '.value.slateRef')
+                # value_elem.text = copy.copy(l.text)
+
                 l.tag = l.tag + '.slateRef'
 
-                # text = l.text
-                # tag = l.tag
-                # if text and tag:
-                    # l.clear()
-                    # ET.SubElement(l, 'slateRef').text = text
 
 
     # ET.dump(QuestScriptDef)
@@ -865,17 +985,19 @@ def QuestScript_def_(QuestScriptDef: ET.Element):
     # ET.dump(QuestScriptDef)
 
 
-def CombatExtended_AmmoDef(ThingDef: ET.Element):
+def CombatExtended_AmmoDef(ThingDef: _Element):
     ...
     #
     # if ThingDef.get('Class') == 'CombatExtended.AmmoDef':
     #     ThingDef.tag = AmmoDef
 
 
-def compProperties_ALL_Reloadable(elem: ET.Element):
+def compProperties_ALL_Reloadable(elem: _Element):
     cs = elem.find('comps')
     if cs is not None:
         for li in cs:
+            if isinstance(li, _Comment):
+                continue
             li_class = li.get('Class', '')
 
             if li_class.startswith('CompProperties_') and li_class.endswith('Reloadable'):
@@ -898,7 +1020,7 @@ def compProperties_ALL_Reloadable(elem: ET.Element):
                         chargeNoun.text = 'charge'
 
 
-def vEF_Abilities_AbilityDef(elem: ET.Element):
+def vEF_Abilities_AbilityDef(elem: _Element):
     try:
         jobReportString = elem.find('jobReportString')
         if jobReportString is None:
@@ -929,7 +1051,7 @@ def vEF_Abilities_AbilityDef(elem: ET.Element):
         print(ex)
 
 
-def FactionDef_def(elem: ET.Element):
+def FactionDef_def(elem: _Element):
     try:
         pawnSingular = elem.find('pawnSingular')
         leaderTitle = elem.find('leaderTitle')
@@ -953,6 +1075,8 @@ def FactionDef_def(elem: ET.Element):
     except Exception as ex:
         print(ex)
     pass
+
+
 
 
 def elem_tag_check(elem):
@@ -991,12 +1115,11 @@ def elem_tag_check(elem):
                     translate_ThingDef_tools(ee)
         ThingDef_MVCF_Comps_CompProperties_VerbProps(elem)
 
-    if elem_tag == "AlienRace.BackstoryDef":
-        add_title_short(elem)
-    if elem_tag == "AlienRace.AlienBackstoryDef":
+    if elem_tag == "AlienRace.BackstoryDef" or elem_tag == "AlienRace.AlienBackstoryDef":
         add_title_short(elem)
     if elem_tag == "BackstoryDef":
         BackstoryDef_add_title_short(elem)
+        backstoryDef_baseDesc_to_description(elem)
     if elem_tag == "TraitDef":
         TraitDef_add_strings(elem)
     if elem_tag == "QuestScriptDef":
@@ -1007,7 +1130,7 @@ def elem_tag_check(elem):
     if elem_tag == "XmlExtensions.SettingsMenuDef":
         XmlExtensions_SettingsMenuDef(elem)
 
-def adding_in_string(folder: str, defname: str, path_list: list[str], elem: ET.Element, print_now: bool = False):
+def adding_in_string(folder: str, defname: str, path_list: list[str], elem: _Element, print_now: bool = False):
 
 
     def debug_print():
@@ -1079,6 +1202,11 @@ def adding_in_string(folder: str, defname: str, path_list: list[str], elem: ET.E
     # try:
     finished_path = ".".join(path_list)
 
+    if 'LI_REPLACE_NUMBER' in finished_path:
+        # print(finished_path)
+        finished_path = finished_path.replace('LI_REPLACE_NUMBER', '')
+        # print(finished_path)
+
     rr = return_none()
     if rr is None:
         return None
@@ -1116,7 +1244,7 @@ def adding_in_string(folder: str, defname: str, path_list: list[str], elem: ET.E
 
 
 
-def dollar_variable_replace(elem: ET.Element):
+def dollar_variable_replace(elem: _Element):
 
     root = elem
 
@@ -1179,7 +1307,7 @@ def dollar_variable_replace(elem: ET.Element):
                     print("Replacing variable:", var_name, 'by', value)
 
 
-def first_launch(root_Def: ET.Element):
+def first_launch(root_Def: _Element):
     path_list1 = []
 
     def has_child(folder, defname, path_list, elem):
@@ -1197,6 +1325,8 @@ def first_launch(root_Def: ET.Element):
     def no_child(folder, defname, path_list, elem):
         """Output elem"""
 
+        if isinstance(elem, etree._Comment):
+            return
 
         if elem.tag.lower() in S.Forbidden_tag:
             return
@@ -1228,9 +1358,10 @@ def first_launch(root_Def: ET.Element):
                 has_child(folder, defname, new_path, elem1)
 
     for defFold_elem in root_Def:
-        if defFold_elem is ET.Comment:
+        if isinstance(defFold_elem, etree._Comment):
             continue
-        if defFold_elem.get('Abstract', default='false').lower() == 'true':
+
+        if defFold_elem.get('Abstract', 'false').lower() == 'true':
             continue
 
         folder1 = defFold_elem.tag
