@@ -6,10 +6,9 @@ from Levenshtein import ratio  # Библиотека python-Levenshtein
 from lxml import etree
 from printy import printy
 
-from GlobFunc import error_handler
+from GlobFunc import error_handler, no_comment_parser
 from Settings_module import SVV as S
 
-no_comment_parser = etree.XMLParser(remove_comments=True)
 
 class MultiIndexDict:
     """

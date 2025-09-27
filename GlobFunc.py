@@ -6,6 +6,9 @@ from printy import printy
 
 from GlobVars import state
 
+no_comment_parser = etree.XMLParser(remove_comments=True, recover=True)
+
+
 
 def escape_printy_string(string) -> str:
     return printy_escape(str(string))

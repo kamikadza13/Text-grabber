@@ -1,44 +1,71 @@
 import re
+from collections import defaultdict
 from pathlib import Path
 
 
 def main(FP: Path):
-    all_files = FP.rglob('*.xml')
-    # all_files = list(Path(FP.mod).glob('RimThunder - Core rus/**/*.xml'))
-    duble_list = []
+    # Собираем все XML файлы
+    all_files = list(FP.rglob('*.xml'))
 
+    # Словарь для отслеживания максимального номера для каждого базового имени
+    base_name_counters = defaultdict(int)
+    # Множество всех существующих имен (глобальная уникальность)
+    all_existing_names = set()
 
-    for file in all_files: # type: Path
-        # print(file)
-        fstem = file.stem
-        # print(fstem)
+    # Первый проход: собираем информацию о всех существующих именах
+    for file in all_files:
+        stem = file.stem
+        all_existing_names.add(stem)
 
-        if fstem not in duble_list:
-            duble_list.append(fstem)
+        # Определяем базовое имя и обновляем счетчик
+        base_name = extract_base_name(stem)
+        current_number = extract_number(stem)
+        base_name_counters[base_name] = max(base_name_counters[base_name], current_number)
+
+    # Второй проход: переименование файлов с конфликтующими именами
+    for file in all_files:
+        original_stem = file.stem
+
+        # Если имя уникально - пропускаем и удаляем его из множества
+        if original_stem in all_existing_names:
+            all_existing_names.remove(original_stem)
             continue
 
-        # print(f'"{fstem}" in Dousble list')
-        match = re.search(r'(\d+)$', fstem)
-        # print(match)
+        # Если имя не уникально - нужно переименовать
+        base_name = extract_base_name(original_stem)
 
-        if match:
-            number = int(match.group(1)) + 1
-            new_filename_without_suffix = re.sub(r'\d+$', str(number), fstem)
-            file.rename(str(file.parent) + "\\" + new_filename_without_suffix + '.xml')
-            duble_list.append(new_filename_without_suffix)
+        # Находим следующее доступное уникальное имя
+        new_stem = find_unique_name(base_name, base_name_counters, all_existing_names)
 
-            print(f'    Renamed {file.name} to {new_filename_without_suffix + ".xml"}')
-        else:
-            file.rename(str(file.parent)  + "\\" + fstem + '0.xml')
-            duble_list.append(fstem + '0')
-            print(f'    Renamed {file.name} to {fstem + "0.xml"}')
+        # Переименовываем файл
+        new_path = file.with_stem(new_stem)
+        file.rename(new_path)
 
-    # print('duble_list', duble_list)
+        # Обновляем множества
+        all_existing_names.add(new_stem)
+        base_name_counters[base_name] += 1
+
+        print(f'Renamed "{file.name}" to "{new_stem}.xml"')
 
 
+def extract_base_name(stem: str) -> str:
+    """Извлекает базовое имя из названия файла (без числового суффикса)"""
+    match = re.search(r'(\d+)$', stem)
+    if match:
+        return stem[:match.start()]
+    return stem
 
 
+def extract_number(stem: str) -> int:
+    """Извлекает числовой суффикс из названия файла"""
+    match = re.search(r'(\d+)$', stem)
+    return int(match.group(1)) if match else 0
 
-    # print(duble_list)
 
-
+def find_unique_name(base_name: str, counters: defaultdict, existing_names: set) -> str:
+    """Находит уникальное имя, увеличивая счетчик до тех пор, пока имя не станет уникальным"""
+    while True:
+        counters[base_name] += 1
+        candidate = f"{base_name}{counters[base_name]}"
+        if candidate not in existing_names:
+            return candidate

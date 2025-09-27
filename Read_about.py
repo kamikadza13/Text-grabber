@@ -4,7 +4,7 @@ from typing import List
 from lxml import etree as etree
 from lxml.etree import _Element
 
-from GlobFunc import error_handler, xml_get_text
+from GlobFunc import error_handler, xml_get_text, no_comment_parser
 from GlobVars import mod_data
 
 
@@ -71,7 +71,7 @@ def get_loadafter_list(root3):
 
 @error_handler(default=mod_data, error_text='Reading About.xml error')
 def reading_about(data_path: str = 'About/About.xml'):
-    tree3 = etree.parse(data_path)
+    tree3 = etree.parse(data_path, no_comment_parser)
     root3 = tree3.getroot()  #type: etree._Element
 
     mod_data.name = xml_get_text(root3, 'name')

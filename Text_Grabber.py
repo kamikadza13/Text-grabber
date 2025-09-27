@@ -40,7 +40,7 @@ import image_edit
 from Finish_string_module import finish_string
 from Get_required_packageIds_and_modNames import get_required_packageIds_and_modNames_func
 from Get_searching_folders import get_searching_folders_with_reqires
-from GlobFunc import escape_printy_string, error_handler
+from GlobFunc import escape_printy_string, error_handler, no_comment_parser
 from GlobVars import Error_log
 from GlobVars import folders
 from GlobVars import mod_data
@@ -54,7 +54,7 @@ from Settings_module import SVV as S
 from text2 import add_elts_from_par
 from text2 import find_parents_in_list_of_pathes
 
-Version_of_Text_grabber: str = "1.6.5"
+Version_of_Text_grabber: str = "1.6.6"
 
 DEBUG = False
 test_mods = r"""
@@ -386,7 +386,7 @@ def main(Inputed_path_to_mod="", qq: queue.Queue = None):
             xml_files = fold.rglob('*.xml')
             for f in xml_files:
                 try:
-                    tree = etree.parse(f)
+                    tree = etree.parse(f, no_comment_parser)
                     root = tree.getroot()
                     # Рекурсивно проверяем все элементы
                     for element in root.iter():
@@ -582,7 +582,7 @@ def main(Inputed_path_to_mod="", qq: queue.Queue = None):
 
             # print("     Чтение из ", str(fil))
             with open(fil, 'r', encoding="utf-8", errors='ignore') as xml_file:
-                tree = etree.parse(xml_file, parser=parser_no_comments)
+                tree = etree.parse(xml_file, parser=no_comment_parser)
             root = tree.getroot()
 
             # print("Добавление элементов из родителей")
@@ -885,7 +885,7 @@ def main(Inputed_path_to_mod="", qq: queue.Queue = None):
     def Rename_Keyed_files():
         try:
             if file_exists("About\\About.xml"):
-                tree3 = etree.parse("About\\About.xml")
+                tree3 = etree.parse("About\\About.xml", no_comment_parser)
                 name_of_mod = tree3.getroot().find("name").text.replace(" ", "_")
                 name_of_mod = "".join(x for x in name_of_mod if x.isalnum())
                 for path, subdirs, files in os.walk(f'_Translation'):
@@ -975,7 +975,7 @@ def main(Inputed_path_to_mod="", qq: queue.Queue = None):
             os.makedirs(d_path, exist_ok=True)
             if file_exists(s1_path):
                 shcopy(s1_path, d_path)
-            tree3 = etree.parse("About\\About.xml")
+            tree3 = etree.parse("About\\About.xml", no_comment_parser)
             root3 = tree3.getroot()
 
             mod_url = f'{get_steam_id_PublishedFileId()}'
@@ -1657,11 +1657,14 @@ class TestApp(ttk_boot.Window):
 if __name__ == '__main__':
 
     def raise_console(Show_console: bool):
+
         """Brings up the Console Window."""
         if Show_console:
             ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 4)
         else:
             ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
+
+
 
 
     def set_appwindow(root):
@@ -1727,7 +1730,7 @@ if __name__ == '__main__':
 
     Window_Text_grabber.update_fast_checkBTNs()
     Window_Text_grabber.after(100, lambda: updater())
-
+    Finalizing.main(Path(r'F:\Games\steamapps\workshop\content\294100\2890901044\_Translation'))
 
     # update_settings()
 

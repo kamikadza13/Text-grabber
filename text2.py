@@ -1,6 +1,6 @@
 import copy
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
 # from xml.etree import ElementTree as et
 # from xml.etree.ElementTree import Element
@@ -8,11 +8,18 @@ from lxml import etree
 from lxml.etree import _Element
 from printy import printy
 
-no_comment_parser = etree.XMLParser(remove_comments=True)
-
+from GlobFunc import no_comment_parser
+from GlobVars import Error_log
 
 
 def adding_elems(current_elem_root: _Element, parent_elem_root: _Element, DEBUG_current_element=False, modify_original=False):
+    def is_list_element(elem: _Element) -> bool:
+        """Проверяет, является ли элемент списком."""
+        children = list(elem)
+        return len(children) > 0 and all(child.tag == 'li' for child in children)
+
+
+
 
     result_elem = current_elem_root if modify_original else copy.deepcopy(current_elem_root)
 
@@ -23,47 +30,40 @@ def adding_elems(current_elem_root: _Element, parent_elem_root: _Element, DEBUG_
 
 
 
-    #   Добавлять будем к элементам родителя.
-
-    elems_by_tags: Dict[str, list[_Element]] = {}
-
-
-
+    # Собираем элементы родителя по тегам
+    elems_by_tags: Dict[str, List[_Element]] = {}
     for e in parent_elem_root:
-        if not elems_by_tags.get(e.tag):
-            elems_by_tags[e.tag] = [copy.deepcopy(e)]
-        else:
-            elems_by_tags[e.tag].append(copy.deepcopy(e))
+        #   Создаем для пустой список если тега нет, а дальше всем добавляем элементы
+        elems_by_tags.setdefault(e.tag, []).append(copy.deepcopy(e))
 
 
-
-    if DEBUG_current_element:
-
-        print("Current elem:")
-        etree.dump(result_elem)
-
-        print("Parent elem:")
-        etree.dump(parent_elem_root)
-
-        print(elems_by_tags.keys())
-        comps = elems_by_tags.get('comps')
-        if comps:
-            print('Parent Comps:')
-            for a in comps[0]:
-                etree.dump(a)
+    # if DEBUG_current_element:
+    #
+    #     print("Current elem:")
+    #     etree.dump(result_elem)
+    #
+    #     print("Parent elem:")
+    #     etree.dump(parent_elem_root)
+    #
+    #     print(elems_by_tags.keys())
+    #     comps = elems_by_tags.get('comps')
+    #     if comps:
+    #         print('Parent Comps:')
+    #         for a in comps[0]:
+    #             etree.dump(a)
 
 
     for e in result_elem:
 
-        if e.get('Inherit') == 'False':
-            continue
+        # if e.get('Inherit') == 'False':
+        #     continue
 
-        if e.tag not in elems_by_tags:
+        if e.tag not in elems_by_tags or e.get('Inherit') == 'False':
             elems_by_tags[e.tag] = [e]
         else:
             #   Элемент есть в родителе
             #   Нужно проверить есть ли <li> в элементе, если так, то доавлять к родительским
-            if list(e) and all(ch.tag == 'li' for ch in e):   #   Все дети ли
+            if is_list_element(e):   #   Все дети ли
 
                 for li in e:
                     for idx, li_s in enumerate(elems_by_tags[e.tag][0]):
@@ -130,8 +130,8 @@ def find_parents_in_list_of_pathes(root_dir: list[Path]):
         return {}
 
     for xml_path in root_dir:
-        # try:
-            tree = etree.parse(xml_path)
+        try:
+            tree = etree.parse(xml_path, parser=no_comment_parser)
             elements = tree.xpath("//*[@Name]")
 
 
@@ -177,8 +177,8 @@ def find_parents_in_list_of_pathes(root_dir: list[Path]):
                                 'Финального родителя у родителя текущего элемента нет'
                                 curr_parent_dict[name] = {'parent': elem.attrib.get('ParentName'),
                                                           'elem': elem}
-        # except Exception as e:
-        #     Error_log.append(f"\nError processing {xml_path}: {e}")
+        except Exception as e:
+            Error_log.append(f"\nError processing {xml_path}: {e}")
 
     printy(f"\r\tProcessed: {processed_parents_idx} parents among {processed_idx} Elements", 'b>', end='', )
 
@@ -262,12 +262,12 @@ def add_elts_from_par(current_root: _Element, parent_root: _Element, DEBUG_curre
 
         # if change_current_bool:
         #     print("До:")
-        #     et.dump(current_root)
+        #     etree.dump(current_root)
 
         new_elem = adding_elems(current_root, parent_root, DEBUG_current_element=DEBUG_current_element, modify_original=change_current_bool,)
         # if change_current_bool:
         #     print("После:")
-        # et.dump(new_elem)
+        # etree.dump(new_elem)
 
         return new_elem
     except Exception as ex:

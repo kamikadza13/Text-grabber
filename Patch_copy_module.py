@@ -4,6 +4,8 @@ from xml import etree
 
 from lxml import etree as ET
 
+from GlobFunc import no_comment_parser
+
 
 def find_patches_with_text(patches_list: dict[Path, Path], Tags_to_extraction: list[str]):
     if not patches_list:
@@ -16,7 +18,7 @@ def find_patches_with_text(patches_list: dict[Path, Path], Tags_to_extraction: l
             with open(path, 'r', encoding="utf-8") as xml_file:
                 # print(p)
                 # input()
-                tree = ET.parse(xml_file)
+                tree = ET.parse(xml_file, no_comment_parser)
             root = tree.getroot()
             operations = root.findall("Operation")
 

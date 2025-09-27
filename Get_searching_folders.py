@@ -7,6 +7,7 @@ from shutil import copy as shcopy
 from lxml import etree as etree
 from printy import printy
 
+from GlobFunc import no_comment_parser
 from GlobVars import mod_data
 from Settings_module import SVV as S
 
@@ -55,7 +56,7 @@ def get_searching_folders_with_reqires():
 
 
         with open('loadFolders.xml', 'r', encoding="utf-8") as lf:
-            tree1 = etree.parse(lf)
+            tree1 = etree.parse(lf, no_comment_parser)
         root1 = tree1.getroot()
         # Папки перевода from loadFolders.xml
         pathes: {str: ()} = {}

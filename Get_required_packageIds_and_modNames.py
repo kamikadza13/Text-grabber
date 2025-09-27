@@ -6,6 +6,7 @@ from printy import printy
 from Get_database_by_list_of_pathes_of_mods import MultiIndexDict
 from GlobFunc import escape_printy_string
 from GlobVars import mod_data
+from text2 import no_comment_parser
 
 DEBUG = False
 
@@ -128,7 +129,7 @@ def get_loadFolders():
 
 
     try:
-        tree = etree.parse('LoadFolders.xml')
+        tree = etree.parse('LoadFolders.xml', parser=no_comment_parser)
         return list(set(
             element.get("IfModActive")
             for element in tree.xpath("//*[@IfModActive]")
@@ -143,7 +144,7 @@ def get_loadFolders():
 
 def get_may_require_values(path:Path):
     try:
-        tree = etree.parse(path)
+        tree = etree.parse(path, no_comment_parser)
         # Используем XPath для поиска всех элементов с атрибутом MayRequire
         elements = tree.xpath("//*[@MayRequire]")
 

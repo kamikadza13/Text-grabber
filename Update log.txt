@@ -1,8 +1,10 @@
 Update log
 
 	TODO: search XmlExtensions.FindMod by     <packageId>default = false</packageId>
+	TODO: Settings_module line 352, Ошибка чтения 
 
-
+Update 1.6.6
+    Fixed parent inheritance when (Inherit=False)
 
 
 Update 1.6.5

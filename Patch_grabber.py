@@ -13,7 +13,7 @@ from printy import printy
 
 from Get_database_by_list_of_pathes_of_mods import MultiIndexDict
 from Get_required_packageIds_and_modNames import search_in_database_by_name, search_in_database_by_fuzzyname, search_in_database_by_part_find
-from GlobFunc import xml_get_text, error_handler
+from GlobFunc import xml_get_text, error_handler, no_comment_parser
 from GlobVars import state
 from Settings_module import SVV as S
 
@@ -247,17 +247,29 @@ def main(folder_required_mods: Tuple, patches_folder=Path('.'), database=None):
                 last_node: lxml.etree.Element
 
             def make_elem_tree_by_elems_str(list_of_elems: list) -> RootElemAndElems:
+
+                def find_defname(text):
+                    match = re.search(r'defName\s*=\s*"([^"]*)"', text, re.IGNORECASE)
+                    return match.group(1) if match else ''
+
                 # for idx, el in enumerate(list_of_elems):
                 #     if "[" in el:
                 #         print(f"[ in elem tag: {el}")
                 #         list_of_elems[idx] = re.sub(fr"\[.*]", '', el)
                 start_pos = 1
-                if ("<" or ">") in list_of_elems[0]:
-                    print("Bad xml creating - add random Thingdef", xpath, patch_file_path)
-                    root_node = Element('ThingDef')
-                    start_pos = 0
-                else:
-                    root_node = Element(list_of_elems[0])
+                try:
+                    if ("<" or ">") in list_of_elems[0]:
+                        print("Bad xml creating - add random Thingdef", xpath, patch_file_path)
+                        root_node = Element('ThingDef')
+                        start_pos = 0
+                    else:
+                        root_node = Element(list_of_elems[0])
+                except Exception as ex:
+                    fd = find_defname(list_of_elems[0])
+                    if fd:
+                        root_node = Element(fd)
+                    else:
+                        root_node = Element('ThingDef')
 
                 last_node = root_node
                 for elem in list_of_elems[start_pos:]:
@@ -681,8 +693,7 @@ def main(folder_required_mods: Tuple, patches_folder=Path('.'), database=None):
         # try:
         with open(patch_file_path, encoding="utf-8") as patch:
             # text_final_patch_grabber.append(f"<!-- Filename: {file} -->\n")
-            parser = etree.XMLParser(remove_comments=True, remove_blank_text=True, )
-            tree = etree.parse(patch, parser)
+            tree = etree.parse(patch, no_comment_parser)
             root = tree.getroot()
 
         current_grabbed_Mod_and_string_list: List[ReqModAndText] = []

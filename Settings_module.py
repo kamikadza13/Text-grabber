@@ -349,7 +349,15 @@ class SettingsLoader:
         self.SV = SV
         self.config = configparser.RawConfigParser()
         self.config.optionxform = str
-        self.config.read(self.config_path)
+
+        try:
+            with open(self.config_path, 'r', encoding='utf-8', errors='replace') as f:
+                self.config.read_file(f)
+        except FileNotFoundError:
+            print(f"Файл {self.config_path} не найден")
+            return
+
+        # self.config.read(self.config_path, encoding='utf-8')
 
 
         self.not_founded_values_dict = {}
