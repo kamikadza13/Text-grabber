@@ -1,7 +1,15 @@
 Update log
 
+	TODO: Check labelNounPretty in ushanka hacking
+	TODO: Check hackingStralth in ushanka hacking
+	TODO: Grab Non English text without spaces
 	TODO: search XmlExtensions.FindMod by     <packageId>default = false</packageId>
 	TODO: Settings_module line 352, Ошибка чтения 
+
+Update 1.6.7
+    Fixed backstory adding
+
+
 
 Update 1.6.6
     Fixed parent inheritance when (Inherit=False)

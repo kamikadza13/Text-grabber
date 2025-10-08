@@ -3,6 +3,7 @@ import html
 import re
 from dataclasses import dataclass
 from re import match
+from typing import Optional
 
 # # from xml import etree as ET
 # from xml.etree import ElementTree as ET
@@ -503,95 +504,57 @@ def ThingDef_add_strings(elem: _Element):
 
 
 def add_title_short(Def: _Element):
+    """
+    Добавляет недостающие элементы в <Def> и <backstory>,
+    используя текст из существующих элементов.
+    """
+    def get_text_from_element(element: Optional[_Element]) -> Optional[str]:
+        """Безопасно получает текст из элемента."""
+        return element.text if element is not None and element.text is not None else None
+
+    def ensure_element_with_text(parent: _Element, tag: str, text: Optional[str]):
+        """
+        Находит дочерний элемент по тегу. Если его нет, создает его.
+        Устанавливает текст элемента, если он был предоставлен.
+        """
+        if text is None:
+            return
+        if parent.find(tag) is None:
+            new_element = ET.SubElement(parent, tag)
+            new_element.text = text
+
     backstory = Def.find("backstory")
     if backstory is None:
         backstory = ET.SubElement(Def, 'backstory')
 
-        baseDesc = Def.find("baseDesc")
-        if baseDesc is not None:
-            backstory_baseDesc = ET.SubElement(backstory, 'baseDesc')
-            backstory_baseDesc.text = baseDesc.text
-        else:
-            baseDescription = Def.find("baseDescription")
-            if baseDescription is not None:
-                backstory_baseDesc = ET.SubElement(backstory, 'baseDesc')
-                backstory_baseDesc.text = baseDescription.text
-        title = Def.find('title')
-        if title is not None:
-            backstory_title = ET.SubElement(backstory, 'title')
-            backstory_title.text = title.text
-        titleShort = Def.find('titleShort')
-        if titleShort is not None:
-            backstory_titleShort = ET.SubElement(backstory, 'titleShort')
-            backstory_titleShort.text = titleShort.text
-        else:
-            titleShort = ET.SubElement(Def, 'titleShort')
-            titleShort.text = title.text[:12]
-            backstory_titleShort = ET.SubElement(backstory, 'titleShort')
-            backstory_titleShort.text = titleShort.text
-    else:
-        backstory_baseDesc = backstory.find("baseDesc")
-        if backstory_baseDesc is None:
-            baseDesc = Def.find("baseDesc")
-            if baseDesc is not None:
-                backstory_baseDesc = ET.SubElement(backstory, 'baseDesc')
-                backstory_baseDesc.text = baseDesc.text
-            else:
-                baseDescription = Def.find("baseDescription")
-                if baseDescription is not None:
-                    backstory_baseDesc = ET.SubElement(backstory, 'baseDesc')
-                    backstory_baseDesc.text = baseDescription.text
+    title_text = get_text_from_element(Def.find('title'))
+    title_short_text = get_text_from_element(Def.find('titleShort'))
+    base_desc_text = get_text_from_element(Def.find("baseDesc")) or \
+                     get_text_from_element(Def.find("baseDescription"))
 
-        backstory_title = backstory.find('title')
-        if backstory_title is None:
-            title = Def.find("title")
-            if title is not None:
-                backstory_title = ET.SubElement(backstory, 'title')
-                backstory_title.text = title.text
+    if title_short_text is None and title_text is not None:
+        title_short_text = title_text[:12]
+        ensure_element_with_text(Def, 'titleShort', title_short_text)
 
-        backstory_titleShort = backstory.find('titleShort')
-        if backstory_titleShort is not None:
-            print(backstory_titleShort.tag)
-            print(backstory_titleShort.text)
-        if backstory_titleShort is None:
-            titleShort = Def.find("titleShort")
-            if titleShort is not None:
-                backstory_titleShort = ET.SubElement(backstory, 'titleShort')
-                backstory_titleShort.text = titleShort.text
-
+    title_female_text = None
     if S.add_titleFemale:
-        titleFemale = Def.find('titleFemale')
-        if titleFemale is None:
-            title = Def.find('title')
-            if title is not None:
-                titleFemale = ET.SubElement(Def, 'titleFemale')
-                titleFemale.text = title.text
-        backstory_titleFemale = backstory.find('titleFemale')
-        if backstory_titleFemale is None:
-            backstory_titleFemale = ET.SubElement(backstory, 'titleFemale')
-            backstory_titleFemale.text = titleFemale.text
+        ensure_element_with_text(Def, 'titleFemale', title_text)
+        title_female_text = get_text_from_element(Def.find('titleFemale'))
 
+    title_short_female_text = None
     if S.add_titleShortFemale:
-        titleShortFemale = Def.find('titleShortFemale')
-        if titleShortFemale is None:
-            titleShort = Def.find("titleShort")
-            if titleShort is not None:
-                titleShortFemale = ET.SubElement(Def, 'titleShortFemale')
-                titleShortFemale.text = titleShort.text
-            else:
-                title = Def.find('title')
-                if title is not None:
-                    titleShortFemale = ET.SubElement(Def, 'titleShortFemale')
-                    if len(title.text) < 13:
-                        titleShortFemale.text = title.text
-                    else:
-                        titleShortFemale.text = title.text[:12]
+        title_short_female_text = get_text_from_element(Def.find('titleShortFemale'))
+        if title_short_female_text is None:
+            source_text = title_short_text or title_text
+            if source_text is not None:
+                title_short_female_text = source_text[:12]
+                ensure_element_with_text(Def, 'titleShortFemale', title_short_female_text)
 
-            backstory_titleShortFemale = backstory.find('titleShortFemale')
-            if backstory_titleShortFemale is None:
-                backstory_titleShortFemale = ET.SubElement(backstory, 'titleShortFemale')
-                backstory_titleShortFemale.text = titleShortFemale.text
-
+    ensure_element_with_text(backstory, 'baseDesc', base_desc_text)
+    ensure_element_with_text(backstory, 'title', title_text)
+    ensure_element_with_text(backstory, 'titleShort', title_short_text)
+    ensure_element_with_text(backstory, 'titleFemale', title_female_text)
+    ensure_element_with_text(backstory, 'titleShortFemale', title_short_female_text)
 
 def get_index_of_children(Def: _Element,l: _Element):
     children = list(Def)
