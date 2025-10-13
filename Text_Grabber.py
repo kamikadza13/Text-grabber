@@ -54,7 +54,7 @@ from Settings_module import SVV as S
 from text2 import add_elts_from_par
 from text2 import find_parents_in_list_of_pathes
 
-Version_of_Text_grabber: str = "1.6.6"
+Version_of_Text_grabber: str = "1.6.8"
 
 DEBUG = False
 test_mods = r"""
@@ -1730,7 +1730,6 @@ if __name__ == '__main__':
 
     Window_Text_grabber.update_fast_checkBTNs()
     Window_Text_grabber.after(100, lambda: updater())
-    Finalizing.main(Path(r'F:\Games\steamapps\workshop\content\294100\2890901044\_Translation'))
 
     # update_settings()
 

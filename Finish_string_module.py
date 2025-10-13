@@ -36,7 +36,7 @@ class ExitList:
     fdpt: list[FolderDefnamePathText]
     keyed: list
 
-
+@error_handler(error_text='RulePackDef error')
 def RulePackDef_def(rulePackDef: _Element):
     global ruleFiles_list
     defName_ET = rulePackDef.find('defName')
@@ -84,7 +84,7 @@ def RulePackDef_def(rulePackDef: _Element):
                     if f'[{line[0]}]'.encode() in ET.tostring(rulesStrings_ET, method='xml'):
                         rulesFiles.append(copy.deepcopy(line[1]))
 
-
+@error_handler(error_text='BodyDef error')
 def BodyDef_rename_li(BodyDef: _Element):
     def parts_li_tag_rename(el: _Element):
         parts = el.find('parts')
@@ -108,7 +108,7 @@ def BodyDef_rename_li(BodyDef: _Element):
     if corePart is not None:
         parts_li_tag_rename(corePart)
 
-
+@error_handler(error_text='PawnKindDef error')
 def pawnKind_add_strings(elem: _Element):
     add_elem = []
     a: list[_Element] = []
@@ -143,7 +143,7 @@ def pawnKind_add_strings(elem: _Element):
                     # print(txt)
                     add_elem[idx_].text = txt + " " + label_text
 
-
+@error_handler(error_text='ScenarioDef error')
 def ScenarioDef_add_strings(elem: _Element):
     if elem.find('scenario') is not None:
         scenario = elem.find('scenario')
@@ -169,7 +169,7 @@ def ScenarioDef_add_strings(elem: _Element):
         if description is not None:
             scenario.append(description)
 
-
+@error_handler(error_text='DamageDef error')
 def DamageDef_add_strings(elem: _Element):
     if elem.find("deathMessage") is None:
         deathMessage = ET.SubElement(elem, "deathMessage")
@@ -225,6 +225,7 @@ def DamageDef_add_strings(elem: _Element):
 #                 if li.get("Class") is not None:
 #                     li.set('Class', "Li_Class_Replaced_by_compClass")
 
+@error_handler()
 def translate_ThingDef_tools(el1: _Element):
     """tools.0"""
     if S.Translate_tools_into_russian:
@@ -435,7 +436,7 @@ def translate_ThingDef_tools(el1: _Element):
                             case 'tail spear':
                                 t.text = "хвостовое копьё"
 
-
+@error_handler(error_text='Error add_missing_verbs_if_verbClass')
 def add_missing_verbs_if_verbClass(Def: _Element):
     """Verb_Shoot
     VerbClass"""
@@ -481,7 +482,7 @@ def add_missing_verbs_if_verbClass(Def: _Element):
 
 
 
-
+@error_handler(error_text='Error stuffAdjective adding in ThingDef')
 def ThingDef_add_strings(elem: _Element):
     if S.Add_stuffAdjective_and_mark_it:
 
@@ -502,7 +503,7 @@ def ThingDef_add_strings(elem: _Element):
                     orig_text = a.text
                     a.text = S.Add_stuffAdjective_and_mark_it_text.replace('~LABEL~', orig_text)
 
-
+@error_handler(error_text='Error AlienRace add_title_short')
 def add_title_short(Def: _Element):
     """
     Добавляет недостающие элементы в <Def> и <backstory>,
@@ -628,7 +629,7 @@ def backstoryDef_baseDesc_to_description(Def):
 
 
 
-
+@error_handler(error_text='Error TraitDef')
 def TraitDef_add_strings(elem: _Element):
     if elem.find("degreeDatas") is not None:
         degreeDatas = elem.find('degreeDatas')
@@ -641,7 +642,7 @@ def TraitDef_add_strings(elem: _Element):
                     labelFemale = ET.SubElement(li, "labelFemale")
                     labelFemale.text = li.find("label").text
 
-
+@error_handler(error_text='Error Tkey_system_QuestScriptDef')
 def Tkey_system_QuestScriptDef(elem: _Element):
     for element in elem.iter():
         if 'TKey' in element.attrib:
@@ -720,7 +721,7 @@ def replace_rulestring(parent: _Element):
     parent.clear()
     parent.text = text
 
-
+@error_handler(error_text='Error XmlExtensions_SettingsMenuDef')
 def XmlExtensions_SettingsMenuDef(elem: _Element):
     settings = elem.find("settings")
     if settings is not None:
@@ -762,7 +763,7 @@ def XmlExtensions_SettingsMenuDef(elem: _Element):
                         els.clear()
                     ExitList.keyed.append((tKeyTip, html.escape(tKeyTip_text)))
 
-
+@error_handler(error_text="Error ThingDef Comp_VerbProps")
 def ThingDef_MVCF_Comps_CompProperties_VerbProps(elem: _Element):
     comps = elem.find("comps")
     if comps is not None:
@@ -947,14 +948,7 @@ def QuestScript_def_(QuestScriptDef: _Element):
 
     # ET.dump(QuestScriptDef)
 
-
-def CombatExtended_AmmoDef(ThingDef: _Element):
-    ...
-    #
-    # if ThingDef.get('Class') == 'CombatExtended.AmmoDef':
-    #     ThingDef.tag = AmmoDef
-
-
+@error_handler(error_text='Error ThingDef CompProperties_ Reloadable or chargeNoun')
 def compProperties_ALL_Reloadable(elem: _Element):
     cs = elem.find('comps')
     if cs is not None:
@@ -982,7 +976,7 @@ def compProperties_ALL_Reloadable(elem: _Element):
                     else:
                         chargeNoun.text = 'charge'
 
-
+@error_handler(error_text='VEF.Abilities.AbilityDef error')
 def vEF_Abilities_AbilityDef(elem: _Element):
     try:
         jobReportString = elem.find('jobReportString')
@@ -1013,7 +1007,7 @@ def vEF_Abilities_AbilityDef(elem: _Element):
     except Exception as ex:
         print(ex)
 
-
+@error_handler(error_text='FactionDef error')
 def FactionDef_def(elem: _Element):
     try:
         pawnSingular = elem.find('pawnSingular')
@@ -1061,7 +1055,6 @@ def elem_tag_check(elem):
     if elem_tag == "DamageDef":
         DamageDef_add_strings(elem)
     if elem_tag == "ThingDef":
-        CombatExtended_AmmoDef(elem)
         # comps_Li_Class_Replace(elem) # Moved to replace_child_li -> li_new_tag_by_child
         add_missing_verbs_if_verbClass(elem)
         ThingDef_add_strings(elem)

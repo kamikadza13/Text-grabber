@@ -355,7 +355,7 @@ class SettingsLoader:
                 self.config.read_file(f)
         except FileNotFoundError:
             print(f"Файл {self.config_path} не найден")
-            return
+
 
         # self.config.read(self.config_path, encoding='utf-8')
 
