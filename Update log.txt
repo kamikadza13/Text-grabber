@@ -1,10 +1,24 @@
 Update log
 
+	TODO: Try grab many mods at once
+	TODO: Check riot sheld CE
+	TODO: Updater - many languages and from integrated translation check
 	TODO: Check labelNounPretty in ushanka hacking
 	TODO: Check hackingStralth in ushanka hacking
 	TODO: Grab Non English text without spaces
 	TODO: search XmlExtensions.FindMod by     <packageId>default = false</packageId>
 	TODO: Settings_module line 352, Ошибка чтения 
+
+Update 1.7.0
+    Fixed letterLabel and letterText in QuestScriptDef
+    Fixed case_insensitive for 'label', 'text', 'customLetterLabel', 'customLetterText' in QuestScriptDef
+
+
+Update 1.6.9
+    Fixed compClass error
+
+Update 1.6.8
+    Fixed settings reading broken settings error.
 
 Update 1.6.7
     Fixed backstory adding

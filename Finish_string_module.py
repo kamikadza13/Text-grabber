@@ -678,7 +678,7 @@ def replace_child_li(parent: _Element):
                 return child_.text.replace(" ", "_")
             if child_.tag == 'compClass':
                 if replace_compclass and child_.text is not None:
-                    return child_.text.replace(" ", "_")
+                    return child_.text.rpartition('.')[2].replace(" ", "_")
         return 'li'
 
     replace_compclass = True if parent.tag == 'comps' else False
@@ -914,7 +914,11 @@ def QuestScript_def_(QuestScriptDef: _Element):
 
     @error_handler(error_text='QuestScriptDef label/text/customLetterLabel/customLetterText error')
     def makeSlateRef(el: _Element):
-        textList = [el.find('label'), el.find('text'), el.find('customLetterLabel'), el.find('customLetterText')]
+
+        tags_to_find = ['label', 'text', 'customLetterLabel', 'customLetterText', 'letterLabel', 'letterText']
+        children_map = {child.tag.lower(): child for child in el}
+        textList = [children_map.get(tag.lower()) for tag in tags_to_find]
+
 
         for l in textList:
 
@@ -931,9 +935,6 @@ def QuestScript_def_(QuestScriptDef: _Element):
 
                 el.insert(target_index + 1, value_elem)
 
-
-                # value_elem = ET.SubElement(el, l.tag + '.value.slateRef')
-                # value_elem.text = copy.copy(l.text)
 
                 l.tag = l.tag + '.slateRef'
 

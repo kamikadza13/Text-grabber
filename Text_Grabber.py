@@ -54,9 +54,9 @@ from Settings_module import SVV as S
 from text2 import add_elts_from_par
 from text2 import find_parents_in_list_of_pathes
 
-Version_of_Text_grabber: str = "1.6.8"
+Version_of_Text_grabber: str = "1.7.0"
 
-DEBUG = False
+DEBUG = False 
 test_mods = r"""
 Pawnmorpher - F:\Games\steamapps\workshop\content\294100\1786466855
 
