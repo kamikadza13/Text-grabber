@@ -29,8 +29,28 @@ current_locale, encoding = locale.getdefaultlocale()
 
 gettext.install('T_test', 'locale/')
 
+LANG_MAP = {'English': 'en', 'Русский': 'ru', 'Spanish': 'es'}
+
 ru_translation = gettext.translation('T_test', 'locale/', fallback=True, languages=['ru'])
+es_translation = gettext.translation('T_test', 'locale/', fallback=False, languages=['es'])
 en_translation = gettext.NullTranslations()
+
+def set_lang(lang_code):
+    if lang_code == 'ru':
+        ru_translation.install()
+        SV.Settings_language = 'ru'
+
+    elif lang_code == 'es':
+        es_translation.install()
+        SV.Settings_language = 'es'
+
+    else:
+        en_translation.install()
+        SV.Settings_language = 'en'
+
+
+    SV.set('Settings_language', SV.Settings_language)
+
 
 
 
@@ -44,10 +64,19 @@ class ToolTipImage(ToolTip):
         """Create a show the tooltip window"""
         if self.toplevel:
             return
-        x = self.widget.winfo_pointerx() + 25
-        y = self.widget.winfo_pointery() + 10
 
-        self.toplevel = ttk.Toplevel(position=(x, y), **self.toplevel_kwargs)
+        # 1. Запоминаем координаты мыши
+        pointer_x = self.widget.winfo_pointerx()
+        pointer_y = self.widget.winfo_pointery()
+
+        # 2. Создаем окно БЕЗ параметра position
+        # Передаем только kwargs, чтобы не дублировать логику позиционирования
+        self.toplevel = ttk.Toplevel(**self.toplevel_kwargs)
+
+        # 3. Скрываем окно сразу после создания, чтобы избежать мерцания/прыжка
+        self.toplevel.withdraw()
+
+        # Создаем контент (картинка)
         lbl = ttk.Label(
             master=self.toplevel,
             padding=0,
@@ -63,21 +92,82 @@ class ToolTipImage(ToolTip):
                 text="\t" + self.text,
                 justify=ttk.LEFT,
                 wraplength=self.wraplength,
-
             )
-            lbl_label.pack(fill=ttk.BOTH, expand=ttk.YES, )
+            lbl_label.pack(fill=ttk.BOTH, expand=ttk.YES)
         else:
             lbl_label = None
+
         if self.bootstyle:
-            # noinspection PyArgumentList
             lbl.configure(bootstyle=self.bootstyle)
             if add_text:
-                # noinspection PyArgumentList
                 lbl_label.configure(bootstyle=self.bootstyle)
         else:
             lbl.configure(style="tooltip.TLabel")
             if add_text:
                 lbl_label.configure(style="tooltip.TLabel")
+
+        # --- РАСЧЕТ ГЕОМЕТРИИ ---
+
+        # Обновляем окно, чтобы Tkinter рассчитал реальные размеры (высоту/ширину)
+        self.toplevel.update_idletasks()
+
+        win_width = self.toplevel.winfo_width()
+        win_height = self.toplevel.winfo_height()
+        screen_width = self.toplevel.winfo_screenwidth()
+        screen_height = self.toplevel.winfo_screenheight()
+
+        # Начальные отступы
+        offset_x = 25
+        offset_y = 10
+
+        # Стандартная позиция (справа снизу от курсора)
+        x = pointer_x + offset_x
+        y = pointer_y + offset_y
+
+        # Проверка: если окно вылезает вниз, показываем его ВВЕРХ
+        if y + win_height > screen_height:
+            # Новая позиция Y: текущая позиция мыши минус высота окна минус отступ
+            y = pointer_y - win_height - offset_y
+
+        # Проверка: если окно вылезает вправо (опционально)
+        if x + win_width > screen_width:
+            x = pointer_x - win_width - 5
+
+        # Устанавливаем окончательную позицию
+        self.toplevel.geometry(f"+{int(x)}+{int(y)}")
+
+        # 4. Показываем окно уже в правильном месте
+        self.toplevel.deiconify()
+
+    def move_tip(self, *_):
+        """Move the tooltip window with cursor, checking screen bounds."""
+        if not self.toplevel:
+            return
+
+        pointer_x = self.widget.winfo_pointerx()
+        pointer_y = self.widget.winfo_pointery()
+
+        # Получаем текущие размеры окна подсказки
+        win_width = self.toplevel.winfo_width()
+        win_height = self.toplevel.winfo_height()
+        screen_width = self.toplevel.winfo_screenwidth()
+        screen_height = self.toplevel.winfo_screenheight()
+
+        offset_x = 25
+        offset_y = 10
+
+        x = pointer_x + offset_x
+        y = pointer_y + offset_y
+
+        # Если не помещается снизу — двигаем наверх
+        if y + win_height > screen_height:
+            y = pointer_y - win_height - offset_y
+
+        # Если не помещается справа — двигаем влево
+        if x + win_width > screen_width:
+            x = pointer_x - win_width - 5
+
+        self.toplevel.geometry(f"+{int(x)}+{int(y)}")
 
 class NewCheckButton(ttk.Checkbutton):
     def __init__(self, parent, text, sv_key, sv_key_text, tooltip_text=None, tooltip_image=None, wraplength=320, command_add=None, **pack_kwargs):
@@ -89,6 +179,9 @@ class NewCheckButton(ttk.Checkbutton):
         if tooltip_image:
             if tooltip_text:
                 ToolTipImage(self,text=tooltip_text, wraplength=wraplength, image=tooltip_image)
+            else:
+                ToolTipImage(self,text='', wraplength=wraplength, image=tooltip_image)
+
         elif tooltip_text:
             ToolTip(self, text=tooltip_text, wraplength=wraplength)
 
@@ -110,18 +203,7 @@ class HeaderFrame(Frame):
         self.build_ui()
 
     def Title_language_selector_selected(self, event):
-        if event.widget.get() == 'Русский':
-            ru_translation.install()
-            SV.Settings_language = 'ru'
-
-            print("Russian lang set")
-        else:
-            en_translation.install()
-            SV.Settings_language = 'en'
-
-            print("Eng lang set")
-
-        SV.set('Settings_language', SV.Settings_language)
+        set_lang(LANG_MAP.get(event.widget.get()))
         self.app.rebuild_ui()
 
     def build_ui(self):
@@ -129,14 +211,21 @@ class HeaderFrame(Frame):
         label.pack(side='left')
         ttk.Button(self, text='⨉', command=self.app.exit_app, style='Close.TButton').pack(side='right', padx=(5,0))
         # noinspection PyArgumentList
-        Header_lang_selector_combo = ttk.Combobox(self, values=list(self.app.LANG_MAP), state='readonly', bootstyle='light')
+        Header_lang_selector_combo = ttk.Combobox(self, values=list(LANG_MAP), state='readonly', bootstyle='light')
         Header_lang_selector_combo.pack(side='right', padx=(5,0))
         ToolTip(Header_lang_selector_combo, text=_("Select Language of Settings Programm"), wraplength=320)
 
 
 
         Header_lang_selector_combo.bind("<<ComboboxSelected>>", self.Title_language_selector_selected)
-        Header_lang_selector_combo.current(1 if SV.Settings_language == 'ru' else 0)
+
+        if SV.Settings_language == 'ru':
+            lang_indx = 1
+        elif SV.Settings_language == 'es':
+            lang_indx = 2
+        else: lang_indx = 0
+
+        Header_lang_selector_combo.current(lang_indx)
 
         label2 = ttk.Label(self, text="Language:")
         label2.pack(side='right', padx=0)
@@ -448,21 +537,9 @@ class CommentFrame(Frame):
             self.Comm_Image.configure(file=f'Images/Comments/{get_img_code()}.png')
 
         def CommFrame_Add_comment():
-            if self.Add_comment.get():
-                self.Comment_add_EN.configure(state='normal')
-                self.Comment_starting_similar_as_ogiganal_text.configure(state='normal')
-                self.Comment_spacing_before_tag.configure(state='normal')
-                self.Comment_replace_n_as_new_line.configure(state='normal')
 
-                if self.Comment_starting_similar_as_ogiganal_text.get():
-                    self.Comment_spacing_before_tag.configure(state='normal')
-                else:
-                    self.Comment_spacing_before_tag.configure(state='disabled')
-            else:
-                self.Comment_add_EN.configure(state='disabled')
-                self.Comment_starting_similar_as_ogiganal_text.configure(state='disabled')
-                self.Comment_spacing_before_tag.configure(state='disabled')
-                self.Comment_replace_n_as_new_line.configure(state='disabled')
+            update_disabled_buttons()
+
             change_comm_checkbtn_img()
 
         Frame_all = ttk.Frame(self)
@@ -495,6 +572,8 @@ class CommentFrame(Frame):
                        command_add=change_comm_checkbtn_img,
                        )
         self.Comment_add_EN.pack(anchor=tk.W, pady=(5,0))
+
+
 
         fr = ttk.Frame(Frame_all, padding=10)
         fr.pack(anchor='nw', side=tk.RIGHT,)
@@ -533,13 +612,7 @@ class CommentFrame(Frame):
                        )
         self.Comment_replace_n_as_new_line.pack(anchor=tk.W, pady=(5,0))
 
-        if not self.Add_comment.get():
-            self.Comment_add_EN.configure(state='disabled')
-            self.Comment_starting_similar_as_ogiganal_text.configure(state='disabled')
-            self.Comment_spacing_before_tag.configure(state='disabled')
-            self.Comment_replace_n_as_new_line.configure(state='disabled')
-        if not self.Comment_starting_similar_as_ogiganal_text.get():
-            self.Comment_spacing_before_tag.configure(state='disabled')
+
 
         Comm_Image_Frame = ttk.Frame(self)
         Comm_Image_Frame.pack(anchor=tk.CENTER)
@@ -549,6 +622,43 @@ class CommentFrame(Frame):
         self.Comm_Image_label.pack(anchor=tk.CENTER)
 
         change_comm_checkbtn_img()
+
+        Frame_after_image = ttk.Frame(self)
+
+        Comment_Repace_text_by_TODO_ToolTip_image = PhotoImage(file='Images/Comments/Replace_TODO.png')
+
+
+        self.Comment_Repace_text_by_TODO = NewCheckButton(Frame_after_image,
+                                                          _('Repace text with TODO'),
+                                                          SV.Comment_Repace_text_by_TODO,
+                                                          'Comment_Repace_text_by_TODO',
+                                                          tooltip_image=Comment_Repace_text_by_TODO_ToolTip_image
+                                                          )
+        self.Comment_Repace_text_by_TODO.pack(anchor=tk.W, pady=(5,0))
+
+        Frame_after_image.pack()
+
+        def update_disabled_buttons():
+
+            if self.Add_comment.get():
+                self.Comment_add_EN.configure(state='normal')
+                self.Comment_starting_similar_as_ogiganal_text.configure(state='normal')
+                self.Comment_replace_n_as_new_line.configure(state='normal')
+                self.Comment_Repace_text_by_TODO.configure(state='normal')
+                if self.Comment_starting_similar_as_ogiganal_text.get():
+                    self.Comment_spacing_before_tag.configure(state='normal')
+                else:
+                    self.Comment_spacing_before_tag.configure(state='disabled')
+            else:
+                self.Comment_add_EN.configure(state='disabled')
+                self.Comment_starting_similar_as_ogiganal_text.configure(state='disabled')
+                self.Comment_spacing_before_tag.configure(state='disabled')
+                self.Comment_replace_n_as_new_line.configure(state='disabled')
+                self.Comment_Repace_text_by_TODO.configure(state='disabled')
+
+
+        update_disabled_buttons()
+
 
 class GrabFrame(Frame):
     def __init__(self, app, main_frame, master_frame,):
@@ -589,7 +699,10 @@ class GrabFrame(Frame):
             self.F2 = ttk.LabelFrame(self, text=_('Add missing translation'))
             self.F2.pack(fill=tk.X, padx=50, pady=(10,0))
 
-            f21 = Frame(self.F2, padding=10)
+            self.F2_top = Frame(self.F2)
+            self.F2_top.pack(fill=tk.X, side=tk.TOP)
+
+            f21 = Frame(self.F2_top, padding=10)
             f21.pack(anchor=tk.W, pady=(5, 0), side='left', fill='y')
 
             add_titleFemale = NewCheckButton(f21,
@@ -606,7 +719,7 @@ class GrabFrame(Frame):
                            )
             add_titleShortFemale.pack(anchor=tk.W, pady=(5,0))
 
-            f22 = Frame(self.F2, padding=10)
+            f22 = Frame(self.F2_top, padding=10)
             f22.pack(anchor=tk.W, pady=(5, 0), side='left')
 
             plural_tooltip_text = _("Add missing tags to choose from in PawnKindDef if they don't exist.")
@@ -651,8 +764,10 @@ class GrabFrame(Frame):
                                                )
             labelFemalePlural.pack(anchor=tk.W, pady=(5,0))
 
-            f23 = Frame(self.F2, padding=10)
-            f23.pack(anchor=tk.W, side=tk.LEFT, fill='y')
+            self.F2_bottom = Frame(self.F2)
+            self.F2_bottom.pack(fill=tk.X, side=tk.BOTTOM)
+            f23 = Frame(self.F2_bottom, padding=10)
+            f23.pack(anchor=tk.N, side=tk.LEFT, fill='y')
 
             def Add_stuffAdjective_and_mark_it_command():
                 if self.Add_stuffAdjective_and_mark_it.get():
@@ -691,7 +806,7 @@ class GrabFrame(Frame):
 
 
 
-            self.F3 = ttk.LabelFrame(self, text='Spacing')
+            self.F3 = ttk.LabelFrame(self, text=_('Spacing'))
             self.F3.pack(fill='both', padx=50, pady=(10,0))
 
             f31 = ttk.Labelframe(self.F3, text=_("Grabbed lines left spacing"), padding=10)
@@ -950,9 +1065,9 @@ class PreviewFrame(Frame):
         self.F_left.pack(expand=False, anchor='nw', side='left')
 
         self.F_right = ttk.LabelFrame(self.F, text=_("Image position"))
-        self.F_right.pack(expand=True, fill=ttk.BOTH, anchor='nw', side='right', padx=(100, 250))
+        self.F_right.pack(expand=True, fill=ttk.BOTH, anchor='nw', side='right', padx=(100, 150))
 
-        self.F_right.a1 = ttk.Frame(self.F_right, width=20, )
+        self.F_right.a1 = ttk.Frame(self.F_right, )
         self.F_right.a1.pack(side='left', fill=ttk.Y)
 
         self.F_right.a2 = ttk.Frame(self.F_right, )
@@ -1279,7 +1394,6 @@ class AdvancedFrame(Frame):
 
 class TestApp(ttk.Toplevel):
 
-    LANG_MAP = {'English': 'en', 'Русский': 'ru'}
 
 
 
@@ -1289,6 +1403,7 @@ class TestApp(ttk.Toplevel):
 
     def exit_app(self):
         self.master.deiconify()
+        self.master.update_language()
 
         # self.master.destroy()
 
@@ -1298,10 +1413,7 @@ class TestApp(ttk.Toplevel):
     def _create_main_frame(self):
         """Создаёт/пересоздаёт интерфейс"""
 
-        if SV.Settings_language == 'ru':
-            ru_translation.install()
-        else:
-            en_translation.install()
+        set_lang(SV.Settings_language)
 
         if hasattr(self, 'main_frame'):
             self.main_frame.destroy()  # Уничтожаем главный фрейм
@@ -1452,11 +1564,15 @@ r'''
 Не это!
 pybabel init -D T_test -i locale/T_test.pot -d locale -l ru --no-wrap
 pybabel init -D T_test -i locale/T_test.pot -d locale -l en --no-wrap
+pybabel init -D T_test -i locale/T_test.pot -d locale -l es --no-wrap
 
 
 Вот это!
 pybabel extract -o locale/T_test.pot --no-wrap Text_grabber_settings.py 
 pybabel update -D T_test -i locale/T_test.pot -d locale -l ru --no-wrap
+pybabel update -D T_test -i locale/T_test.pot -d locale -l es --no-wrap
 pybabel compile -D T_test -i locale\ru\LC_MESSAGES\T_test.po -o locale\ru\LC_MESSAGES\T_test.mo
+pybabel compile -D T_test -i locale\es\LC_MESSAGES\T_test.po -o locale\es\LC_MESSAGES\T_test.mo
+
 '''
 

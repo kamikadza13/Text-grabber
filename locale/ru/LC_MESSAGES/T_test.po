@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-08-20 23:52+0300\n"
+"POT-Creation-Date: 2026-03-15 10:32+0300\n"
 "PO-Revision-Date: 2023-10-28 22:38+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ru\n"
@@ -18,23 +18,23 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
 
-#: Text_grabber_settings.py:128
+#: Text_grabber_settings.py:210
 msgid "Text Grabber Settings"
 msgstr "Text Grabber Настройки"
 
-#: Text_grabber_settings.py:134
+#: Text_grabber_settings.py:216
 msgid "Select Language of Settings Programm"
 msgstr "Select Language of Settings Programm"
 
-#: Text_grabber_settings.py:202
+#: Text_grabber_settings.py:291
 msgid "Enter your language"
 msgstr "Введите свой язык"
 
-#: Text_grabber_settings.py:203
+#: Text_grabber_settings.py:292
 msgid "Translate mod into:"
 msgstr "Перевести мод на"
 
-#: Text_grabber_settings.py:206
+#: Text_grabber_settings.py:295
 msgid ""
 "Choose the language you are going to translate mods into.\n"
 "Rimworld has been officially translated into several languages, and in order for your translation of the mod to be automatically added to the game, and not act as a separate new language, use the preset languages from the list\n"
@@ -43,15 +43,15 @@ msgstr ""
 "Выберите язык, на который вы собираетесь переводить моды   Rimworld официально переведен на несколько языков и для чтобы ваш перевод мода был автоматически добавлен в игру, а не выступал как отдельный новый язык, используйте предустановленные языки из списка.\n"
 "Если вы хотите изменить язык программы, то язык выбирается вверху рядом с кнопкой закрытия программы\""
 
-#: Text_grabber_settings.py:236
+#: Text_grabber_settings.py:325
 msgid "Pathes to Rimworld folders"
 msgstr "Пути к папкам Rimworld"
 
-#: Text_grabber_settings.py:243
+#: Text_grabber_settings.py:332
 msgid "Select Data folder"
 msgstr "Выберите папку Rimworld Data"
 
-#: Text_grabber_settings.py:246 Text_grabber_settings.py:254
+#: Text_grabber_settings.py:335 Text_grabber_settings.py:343
 msgid ""
 "Rimworld Data:\n"
 "None"
@@ -59,16 +59,16 @@ msgstr ""
 "Rimworld Data:\n"
 "None"
 
-#: Text_grabber_settings.py:247 Text_grabber_settings.py:255
+#: Text_grabber_settings.py:336 Text_grabber_settings.py:344
 msgid "Folder Not selected"
 msgstr "Папка НЕ выбрана"
 
-#: Text_grabber_settings.py:255
+#: Text_grabber_settings.py:344
 #, fuzzy
 msgid "Selected path is not Data folder"
 msgstr "Папка НЕ выбрана - Выбранный путь не содержит папку Data"
 
-#: Text_grabber_settings.py:262 Text_grabber_settings.py:266
+#: Text_grabber_settings.py:351 Text_grabber_settings.py:355
 #, python-brace-format
 msgid ""
 "Rimworld Data:\n"
@@ -77,19 +77,19 @@ msgstr ""
 "Rimworld Data:\n"
 "{Path_to_Data}"
 
-#: Text_grabber_settings.py:264
+#: Text_grabber_settings.py:353
 msgid "Select path to Rimworld Data"
 msgstr "Выберите папку Rimworld Data"
 
-#: Text_grabber_settings.py:270
+#: Text_grabber_settings.py:359
 msgid "Please specify the Data folder of the game, it will help to extract the text better. This is not necessary, but it allows you to find parent-child dependencies."
 msgstr "Пожалуйста, укажите папку Data игры, это поможет лучше извлечь текст. В этом нет необходимости, но это позволяет найти родительско-дочерние зависимости"
 
-#: Text_grabber_settings.py:277
+#: Text_grabber_settings.py:366
 msgid "Select MOD folder"
 msgstr "Выберите папку модов Rimworld"
 
-#: Text_grabber_settings.py:284 Text_grabber_settings.py:289
+#: Text_grabber_settings.py:373 Text_grabber_settings.py:378
 #, python-brace-format
 msgid ""
 "Rimworld Mods Folder:\n"
@@ -98,15 +98,15 @@ msgstr ""
 "Rimworld Папка с модами:\n"
 "{Path_to_Mod_folder}"
 
-#: Text_grabber_settings.py:286
+#: Text_grabber_settings.py:375
 msgid "Select path to Rimworld Mods Folder"
 msgstr "Выберите папку модов Rimworld"
 
-#: Text_grabber_settings.py:296
+#: Text_grabber_settings.py:385
 msgid "Select Another mod folder"
 msgstr "Выберите дополнительную папку модов Rimworld"
 
-#: Text_grabber_settings.py:303 Text_grabber_settings.py:308
+#: Text_grabber_settings.py:392 Text_grabber_settings.py:397
 #, python-brace-format
 msgid ""
 "Another Rimworld Mods Folder:\n"
@@ -115,23 +115,23 @@ msgstr ""
 "Другая папка с модами:\n"
 "{Path_to_Another_folder}"
 
-#: Text_grabber_settings.py:305
+#: Text_grabber_settings.py:394
 msgid "Select path to another Rimworld Mods Folder"
 msgstr "Выберите дополнительную папку модов Rimworld"
 
-#: Text_grabber_settings.py:312
+#: Text_grabber_settings.py:401
 msgid "If you suddenly store mods somewhere else, you can specify this folder here. In this case, the program will work better with mods that depend on other mods (in case the values for translation are inherited from another mod)."
 msgstr "Если вы внезапно храните моды где-то еще, то можете указать эту папку тут. В этом случае программа будет лучше работать с модами, которые зависят от других модов (В случае, если значения для перевода наследуются от другого мода)."
 
-#: Text_grabber_settings.py:316
+#: Text_grabber_settings.py:405
 msgid "Extraction files rules"
 msgstr "Правила извлечения файлов"
 
-#: Text_grabber_settings.py:324
+#: Text_grabber_settings.py:413
 msgid "Delete old version folders"
 msgstr "Удалить папки со старыми версиями"
 
-#: Text_grabber_settings.py:327
+#: Text_grabber_settings.py:416
 msgid ""
 "Delete (Not extract) text for older versions of Rimworld.\n"
 "By default, the program extracts text for all available versions ( ... 1.0, 1.1, 1.2 ...). You can leave only the newest version, so as not to translate too much (Which I advise you to do)"
@@ -139,11 +139,11 @@ msgstr ""
 "Удалять (Не извлекать) текст для старых версий Rimworld.\n"
 "По умолчанию программа извлекает текст для всех доступных версий ( ... 1.0, 1.1, 1.2 ...). Вы можете оставить только самую новую версию, чтобы не переводить лишнего (Что я вам и советую)"
 
-#: Text_grabber_settings.py:331
+#: Text_grabber_settings.py:420
 msgid "Merge Folders"
 msgstr "Объединять папки"
 
-#: Text_grabber_settings.py:334
+#: Text_grabber_settings.py:423
 msgid ""
 "Merge version and Language folders into one Language folder\n"
 "(If there is only one version folder)"
@@ -151,11 +151,11 @@ msgstr ""
 "Объединить папки версий и Language в одну папку Language\n"
 "(Работает только если существует только одна папка версий)"
 
-#: Text_grabber_settings.py:338
+#: Text_grabber_settings.py:427
 msgid "Not rename files"
 msgstr "Не переименовывать файлы"
 
-#: Text_grabber_settings.py:341
+#: Text_grabber_settings.py:430
 msgid ""
 "Files are automatically renamed depending on the folders they fall into. This is necessary to prevent the files from having the same names, which may lead to the fact that the game will not read the translation files.\n"
 "(Check the box if you don't like it and you want to keep the original titles)"
@@ -163,116 +163,120 @@ msgstr ""
 "Файлы автоматически переименовываются в зависимости от того, в какие папки они попадают. Это необходимо для того, чтобы файлы не имели одинаковых имен, что может привести к тому, что игра не будет читать файлы перевода.\n"
 "(Установите флажок, если вам это не нравится и вы хотите сохранить оригинальные названия)"
 
-#: Text_grabber_settings.py:346
+#: Text_grabber_settings.py:435
 msgid "Not rename Keyed"
 msgstr "Не переименовывать Keyed"
 
-#: Text_grabber_settings.py:349
+#: Text_grabber_settings.py:438
 msgid "Do not rename \"Keyed\" files"
 msgstr "Не переименовывать Keyed"
 
-#: Text_grabber_settings.py:353
+#: Text_grabber_settings.py:442
 msgid "Copy original patches"
 msgstr "Скопировать оригинальные патчи"
 
-#: Text_grabber_settings.py:356
+#: Text_grabber_settings.py:445
 msgid "If you don't trust text extraction from patches - It is many times more complex and the error rate can be high. When this option is enabled - the Program will copy patches that it thinks have text in them, so that you can manually check the extracted text. It will be in a separate folder - “From_patches”"
 msgstr "Если вы не доверяете извлечению текста из патчей - Оно в разы сложнее, и количество ошибок может быть большим. При включении этой опции - Программа скопирует патчи, в которых по ее мнению есть текст, чтобы вы вручную могли проверить извлеченный текст. Он будет в отдельной папке - “From_patches”"
 
-#: Text_grabber_settings.py:361 Text_grabber_settings.py:786
-#: Text_grabber_settings.py:1253
+#: Text_grabber_settings.py:450 Text_grabber_settings.py:901
+#: Text_grabber_settings.py:1368
 msgid "Other"
 msgstr "Остальное"
 
-#: Text_grabber_settings.py:369
+#: Text_grabber_settings.py:458
 msgid "Check updates"
 msgstr "Проверять обновления"
 
-#: Text_grabber_settings.py:372
+#: Text_grabber_settings.py:461
 msgid "Check updates from GitHub and Download it if find new version"
 msgstr "Проверять обновления с GitHub и скачивать если найдена новая версия"
 
-#: Text_grabber_settings.py:377
+#: Text_grabber_settings.py:466
 msgid "Adding xml-version-encoding string"
 msgstr "Добавлять строку xml-version-encoding"
 
-#: Text_grabber_settings.py:380
+#: Text_grabber_settings.py:469
 msgid "Add <?xml version=\"1.0\" encoding=\"utf-8\"?> at start of xml files"
 msgstr "Добавлять <?xml version=\"1.0\" encoding=\"utf-8\"?> в начало xml файлов"
 
-#: Text_grabber_settings.py:386
+#: Text_grabber_settings.py:475
 msgid "Adding xml-version-encoding string in Keyed"
 msgstr "Добавлять строку xml-version-encoding в Keyed"
 
-#: Text_grabber_settings.py:389
+#: Text_grabber_settings.py:478
 msgid "Add <?xml version=\"1.0\" encoding=\"utf-8\"?> at start of Keyed xml files"
 msgstr "Добавлять <?xml version=\"1.0\" encoding=\"utf-8\"?> в начало Keyed файлов"
 
-#: Text_grabber_settings.py:394
+#: Text_grabber_settings.py:483
 msgid "Open Grabbed folder after end"
 msgstr "Открывать папку с извлеченным текстом"
 
-#: Text_grabber_settings.py:397
+#: Text_grabber_settings.py:486
 msgid "Open Grabbed folder after processing grabbing text"
 msgstr "Открывать папку с извлеченным текстом после завершения программы"
 
-#: Text_grabber_settings.py:402
+#: Text_grabber_settings.py:491
 msgid "Russian language"
 msgstr "Русский язык"
 
-#: Text_grabber_settings.py:409
+#: Text_grabber_settings.py:498
 msgid "tools and death messages into russian"
 msgstr "tools и death messages на русский"
 
-#: Text_grabber_settings.py:412
+#: Text_grabber_settings.py:501
 msgid "Translate stock->приклад, barrel->ствол, acid fangs->кислотные клыки и т.п."
 msgstr "Перевести stock->приклад, barrel->ствол, acid fangs->кислотные клыки и т.п."
 
-#: Text_grabber_settings.py:417
+#: Text_grabber_settings.py:506
 msgid "General Settings"
 msgstr "Общие настройки"
 
-#: Text_grabber_settings.py:431
+#: Text_grabber_settings.py:520
 msgid "Comments"
 msgstr "Комментарии"
 
-#: Text_grabber_settings.py:476
+#: Text_grabber_settings.py:553
 msgid "Add in file comment with FullPath of Original file"
 msgstr "Добавьте в файл комментарий с полным путем к исходному файлу"
 
-#: Text_grabber_settings.py:484
+#: Text_grabber_settings.py:561
 msgid "Add comments to grabbed text"
 msgstr "Добавлять комментарии с извлеченным текстом"
 
-#: Text_grabber_settings.py:492
+#: Text_grabber_settings.py:569
 msgid "Add \"EN:\" before comment text"
 msgstr "Добавлять \"EN:\" перед текстом комментария"
 
-#: Text_grabber_settings.py:512
+#: Text_grabber_settings.py:591
 msgid "Place the comment text exactly above the original text"
 msgstr "Размещать текст комментария точно над исходным текстом"
 
-#: Text_grabber_settings.py:521
+#: Text_grabber_settings.py:600
 msgid "Left spacing are in before the comment"
 msgstr "Левый интервал находится перед комментарием"
 
-#: Text_grabber_settings.py:529
+#: Text_grabber_settings.py:608
 msgid "Comment replace \\n as new line"
 msgstr "Заменить \\n новой строкой"
 
-#: Text_grabber_settings.py:559
+#: Text_grabber_settings.py:632
+msgid "Repace text with TODO"
+msgstr "Заменить текст на TODO"
+
+#: Text_grabber_settings.py:669
 msgid "Grabbing"
 msgstr "Извлечение"
 
-#: Text_grabber_settings.py:567
+#: Text_grabber_settings.py:677
 msgid "Сommon"
 msgstr "Общее"
 
-#: Text_grabber_settings.py:575
+#: Text_grabber_settings.py:685
 msgid "Check at least one letter in text"
 msgstr "Проверять хотя бы одну букву в тексте"
 
-#: Text_grabber_settings.py:578
+#: Text_grabber_settings.py:688
 msgid ""
 "Check if there is at least one letter in the extracted text. This is necessary so as not to extract all sorts of (255, 123, 112).\n"
 "You may want to remove the flag if the mod adds various symbols without letters that you want to translate like \"<--\",\n"
@@ -282,47 +286,47 @@ msgstr ""
 "Возможно, вы захотите удалить флаг, если мод добавляет различные символы без букв, которые вы хотите перевести, например, такой как \"<--\",\n"
 "Я вообще не знаю, зачем это переводить, но кто знает ^_^"
 
-#: Text_grabber_settings.py:589
+#: Text_grabber_settings.py:699
 msgid "Add missing translation"
 msgstr "Пропущенные переводы"
 
-#: Text_grabber_settings.py:596
+#: Text_grabber_settings.py:709
 msgid "Add titleFemale if it is not in the original file"
 msgstr "Добавлять titleFemale, если его нет в исходном файле"
 
-#: Text_grabber_settings.py:603
+#: Text_grabber_settings.py:716
 msgid "Add titleShortFemale if it is not in the original file"
 msgstr "Добавьте titleShortFemale, если его нет в исходном файле"
 
-#: Text_grabber_settings.py:612
+#: Text_grabber_settings.py:725
 msgid "Add missing tags to choose from in PawnKindDef if they don't exist."
 msgstr "Добавлять отсутствующие теги в PawnKindDef"
 
-#: Text_grabber_settings.py:615
+#: Text_grabber_settings.py:728
 msgid "Add labelPlural"
 msgstr "Добавлять labelPlural"
 
-#: Text_grabber_settings.py:623
+#: Text_grabber_settings.py:736
 msgid "Add labelMale"
 msgstr "Добавлять labelMale"
 
-#: Text_grabber_settings.py:631
+#: Text_grabber_settings.py:744
 msgid "Add labelFemale"
 msgstr "Добавлять labelFemale"
 
-#: Text_grabber_settings.py:639
+#: Text_grabber_settings.py:752
 msgid "Add labelMalePlural"
 msgstr "Добавлять labelMalePlural"
 
-#: Text_grabber_settings.py:647
+#: Text_grabber_settings.py:760
 msgid "Add labelFemalePlural"
 msgstr "Добавлять labelFemalePlural"
 
-#: Text_grabber_settings.py:664
+#: Text_grabber_settings.py:779
 msgid "Add stuffAdjective and mark it"
 msgstr "Добавить stuffAdjective и пометить его"
 
-#: Text_grabber_settings.py:668
+#: Text_grabber_settings.py:783
 msgid ""
 "Some materials can be used to build buildings / make objects, but the authors do not add a special label for this. And in translation it turns out: 'Made of stone'. This is normal for English, but not for some languages.  Therefore, I decided to add a special label to understand how to translate a word as an adjective/ genitive. \n"
 " You can write yourself how to designate such words in the text. To correctly translate such a word, you need to mentally put 'The house is made of' in front of it. \n"
@@ -332,7 +336,7 @@ msgstr ""
 "  Вы можете написать сами как обозначать в тексте такие слова. \n"
 " '~LABEL~' будет заменен на оригинальное слово. Если вы хотите просто добавить такие слова для перевода, но не хотите их отдельно отмечать, то можете написать только '~LABEL~'."
 
-#: Text_grabber_settings.py:677
+#: Text_grabber_settings.py:792
 msgid ""
 "'~LABEL~' will be replaced with the original word. \n"
 " If you just want to add such words for translation, but do not want to mark them separately, then you can only write '~LABEL~'"
@@ -340,51 +344,55 @@ msgstr ""
 "\"~LABEL~\" будет заменен исходным словом. \n"
 " Если вы просто хотите добавить такие слова для перевода, но не хотите отмечать их отдельно, то вы можете написать только '~LABEL~'"
 
-#: Text_grabber_settings.py:697
+#: Text_grabber_settings.py:809
+msgid "Spacing"
+msgstr "Отступы"
+
+#: Text_grabber_settings.py:812
 msgid "Grabbed lines left spacing"
 msgstr "Левый отступ"
 
-#: Text_grabber_settings.py:705
+#: Text_grabber_settings.py:820
 msgid "One tab"
 msgstr "Один Tab"
 
-#: Text_grabber_settings.py:716
+#: Text_grabber_settings.py:831
 msgid "Two spaces"
 msgstr "Два пробела"
 
-#: Text_grabber_settings.py:727
+#: Text_grabber_settings.py:842
 msgid "Fore spaces"
 msgstr "Четыре пробела"
 
-#: Text_grabber_settings.py:737
+#: Text_grabber_settings.py:852
 msgid "No spaces"
 msgstr "Без отступа"
 
-#: Text_grabber_settings.py:754
+#: Text_grabber_settings.py:869
 msgid "Separating empty lines"
 msgstr "Разделение пустой строкой"
 
-#: Text_grabber_settings.py:763
+#: Text_grabber_settings.py:878
 msgid "Divide the text into blocks by Defname"
 msgstr "Разделять текст на блоки по Defname"
 
-#: Text_grabber_settings.py:766
+#: Text_grabber_settings.py:881
 msgid "Add empty line before each new grabbed defname"
 msgstr "Добавлять пустую строку перед новым извлеченным defname"
 
-#: Text_grabber_settings.py:774
+#: Text_grabber_settings.py:889
 msgid "Threshold for adding an empty line"
 msgstr "Порог добавления пустых строк"
 
-#: Text_grabber_settings.py:777
+#: Text_grabber_settings.py:892
 msgid "Empty lines will be added if there are many lines with the same defname in the file. (If the number of different defnames is less than half of all strings.)"
 msgstr "Пустые строки будут добавлены в том случае, если в файле много строк с одинаковым defname. (Если количество различных defname меньше половины от всех строк.)"
 
-#: Text_grabber_settings.py:790
+#: Text_grabber_settings.py:905
 msgid "QuestScriptDef Tkey system"
 msgstr "QuestScriptDef Tkey система"
 
-#: Text_grabber_settings.py:793
+#: Text_grabber_settings.py:908
 msgid ""
 "At 1.4 patch TKey system was broken. If the developers fix it, then enable this feature.\n"
 " The Tkey system is specifically designed to simplify long tag paths."
@@ -392,31 +400,31 @@ msgstr ""
 "В патче 1.4 система TKey была сломана. Если разработчики это исправят, то включите эту функцию.\n"
 "Система Tkey специально разработана для укорочения длинных путей к тегам\""
 
-#: Text_grabber_settings.py:810
+#: Text_grabber_settings.py:925
 msgid "About"
 msgstr "About"
 
-#: Text_grabber_settings.py:849
+#: Text_grabber_settings.py:964
 msgid "Author"
 msgstr "Автор"
 
-#: Text_grabber_settings.py:866
+#: Text_grabber_settings.py:981
 msgid "New Name"
 msgstr "Новое название"
 
-#: Text_grabber_settings.py:875
+#: Text_grabber_settings.py:990
 msgid "~MOD_NAME~ will be replaced with the name of the original mod."
 msgstr "~MOD_NAME~ будет заменено названием оригинального мода."
 
-#: Text_grabber_settings.py:897
+#: Text_grabber_settings.py:1012
 msgid "Add modDependencies"
 msgstr "Добавлять modDependencies"
 
-#: Text_grabber_settings.py:908
+#: Text_grabber_settings.py:1023
 msgid "Description"
 msgstr "Описание"
 
-#: Text_grabber_settings.py:914
+#: Text_grabber_settings.py:1029
 msgid ""
 "~MOD_NAME~ will be replaced with the name of the original mod\n"
 "~MOD_DESCRIPTION~ will be replaced with the original mod description\n"
@@ -426,71 +434,71 @@ msgstr ""
 "~MOD_DESCRIPTION~ будет заменено оригинальным описанием мода\n"
 "~MOD_URL~ будет заменено исходным URL-адресом мода"
 
-#: Text_grabber_settings.py:930
+#: Text_grabber_settings.py:1045
 msgid "Example About.xml"
 msgstr "Пример About.xml"
 
-#: Text_grabber_settings.py:943
+#: Text_grabber_settings.py:1058
 msgid "Preview"
 msgstr "Превью"
 
-#: Text_grabber_settings.py:952
+#: Text_grabber_settings.py:1067
 msgid "Image position"
 msgstr "Позиция картинки"
 
-#: Text_grabber_settings.py:971
+#: Text_grabber_settings.py:1086
 msgid "Top left"
 msgstr "Вверху слева"
 
-#: Text_grabber_settings.py:974
+#: Text_grabber_settings.py:1089
 msgid "Top right"
 msgstr "Вверху справа"
 
-#: Text_grabber_settings.py:980
+#: Text_grabber_settings.py:1095
 msgid "Center"
 msgstr "В центре"
 
-#: Text_grabber_settings.py:992
+#: Text_grabber_settings.py:1107
 msgid "Bottom left"
 msgstr "Снизу слева"
 
-#: Text_grabber_settings.py:995
+#: Text_grabber_settings.py:1110
 msgid "Bottom right"
 msgstr "Снизу справа"
 
-#: Text_grabber_settings.py:1027
+#: Text_grabber_settings.py:1142
 msgid "Add an image to the preview"
 msgstr "Добавлять картинку на превью"
 
-#: Text_grabber_settings.py:1030
+#: Text_grabber_settings.py:1145
 msgid "Add YOUR image to the original mod preview."
 msgstr "Добавлять СВОЕ изображение в превью в About"
 
-#: Text_grabber_settings.py:1041
+#: Text_grabber_settings.py:1156
 msgid "Select Your image"
 msgstr "Выбрать картинку"
 
-#: Text_grabber_settings.py:1051
+#: Text_grabber_settings.py:1166
 msgid "x Offset"
 msgstr "Смещение по Х"
 
-#: Text_grabber_settings.py:1112
+#: Text_grabber_settings.py:1227
 msgid "y Offset"
 msgstr "Смещение по У"
 
-#: Text_grabber_settings.py:1153
+#: Text_grabber_settings.py:1268
 msgid "Advanced"
 msgstr "Сложные настройки"
 
-#: Text_grabber_settings.py:1161
+#: Text_grabber_settings.py:1276
 msgid "Tags for extraction"
 msgstr "Тэги для извлечения"
 
-#: Text_grabber_settings.py:1164
+#: Text_grabber_settings.py:1279
 msgid "Tags to extraction"
 msgstr "Извлекаемые теги"
 
-#: Text_grabber_settings.py:1168
+#: Text_grabber_settings.py:1283
 msgid ""
 "<Tags> to be extracted for translation, for example, if you want to extract \"anima heart\" from \n"
 "<label>anima heart</label>,\n"
@@ -500,11 +508,11 @@ msgstr ""
 "<label>anima heart</label>,\n"
 " то в списке тэгов для извлечения должен быть \"label\"\""
 
-#: Text_grabber_settings.py:1172
+#: Text_grabber_settings.py:1287
 msgid "Part of tag to extraction"
 msgstr "Часть тега для извлечения"
 
-#: Text_grabber_settings.py:1176
+#: Text_grabber_settings.py:1291
 msgid ""
 "If you need to extract all <tags> that have a common part, for example, all <tags> with \"Message\". Such as:\n"
 "<NewMessage>Hello</NewMessage>\n"
@@ -518,11 +526,11 @@ msgstr ""
 "<Message1>Hello</Message1>\n"
 "Регистр важен"
 
-#: Text_grabber_settings.py:1182
+#: Text_grabber_settings.py:1297
 msgid "Tags before <li>"
 msgstr "Теги перед <li>"
 
-#: Text_grabber_settings.py:1186
+#: Text_grabber_settings.py:1301
 msgid ""
 "A list of <tags> that are in front of a set of consecutive <li> that need to be output\n"
 "like:<rulePack>\n"
@@ -548,15 +556,15 @@ msgstr ""
 "Добавляйте сюда тэги только если полностью уверены, что Rimworld поддерживает эти списки\n"
 "Так, например, в 1.3 \"thoughtStageDescriptions\" не поддерживается, и приходится каждую строчку писать отдельно"
 
-#: Text_grabber_settings.py:1198
+#: Text_grabber_settings.py:1313
 msgid "Forbidden"
 msgstr "Запрещенное"
 
-#: Text_grabber_settings.py:1201
+#: Text_grabber_settings.py:1316
 msgid "Forbidden tags"
 msgstr "Запрещенные теги"
 
-#: Text_grabber_settings.py:1205
+#: Text_grabber_settings.py:1320
 msgid ""
 "<Tags> that will not be extracted. Usually you don't need to add much here, but if the program constantly extracts something superfluous, then it makes sense to prohibit the extraction of the tag in any way\n"
 "The first way is to prohibit the extraction of this particular <Tag>. In this case, those tags that completely match the list will not be extracted.\n"
@@ -568,11 +576,11 @@ msgstr ""
 "Например <developmentalStageFilter>Baby, Child, Adult</developmentalStageFilter>\n"
 "Т.к. эта строка очень похожа на нормальный текст, который было бы желательно извлечь т.к. в ней есть пробелы, <Тэг> нужно запретить."
 
-#: Text_grabber_settings.py:1211
+#: Text_grabber_settings.py:1326
 msgid "Forbidden part of tag"
 msgstr "Запрещенные части тега"
 
-#: Text_grabber_settings.py:1215
+#: Text_grabber_settings.py:1330
 msgid ""
 "If you need to prohibit extraction of all <tags> that have a common part, for example, all <tags> with \"Texture\". Such as:\n"
 "<Texture>Texture1.png</Texture>\n"
@@ -586,11 +594,11 @@ msgstr ""
 "<MetalTexture>Texture3.png</MetalTexture>\n"
 "Регистр важен"
 
-#: Text_grabber_settings.py:1222
+#: Text_grabber_settings.py:1337
 msgid "Forbidden part of path"
 msgstr "Запрещенные части пути"
 
-#: Text_grabber_settings.py:1226
+#: Text_grabber_settings.py:1341
 msgid ""
 "If you need to prohibit all tags that have a common part of the path: So for\n"
 "<TraitDef>\n"
@@ -616,11 +624,11 @@ msgstr ""
 "Путь к тексту \"Ally\" будет \"/TraitDef/ReunionCharacter/degreeDatas/li/label\"\n"
 "А запретить можно, например, /degreeDatas/li/"
 
-#: Text_grabber_settings.py:1238
+#: Text_grabber_settings.py:1353
 msgid "Forbidden text"
 msgstr "Запрещенный текст"
 
-#: Text_grabber_settings.py:1242
+#: Text_grabber_settings.py:1357
 msgid ""
 "Sometimes it is necessary to prohibit not the <Tag> but the text. For example, all sorts of true false can sometimes be extracted by the program\n"
 "<ThingDef>\n"
@@ -636,11 +644,11 @@ msgstr ""
 "</ThingDef>\n"
 "Т.к. в Тэге <useHitPoints_label> есть label, то такой тэг может быть ошибочно извлечен. Поэтому можно как запретить именно такой тэг, так и запретить текст 'true'. Если текст в Тэге будет полностью совпадать с добавленным в список запрещенного текста, то он не будет извлечен"
 
-#: Text_grabber_settings.py:1256
+#: Text_grabber_settings.py:1371
 msgid "<li> class replace"
 msgstr "Замена в <li Class>"
 
-#: Text_grabber_settings.py:1260
+#: Text_grabber_settings.py:1375
 msgid ""
 "Sometimes TranslationReport wants some <li> to be replaced not with numbers, but with text, depending on \"li Class=\" for example:\n"
 "<QuestScriptDef>\n"

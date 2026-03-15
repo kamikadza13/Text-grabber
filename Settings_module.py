@@ -170,6 +170,7 @@ ScenPart_='''
     Add_filename_comment: bool = True
     Add_comment: bool = True
     Comment_add_EN: bool = True
+    Comment_Repace_text_by_TODO: bool = False
     Comment_starting_similar_as_ogiganal_text: bool = True
     Comment_spacing_before_tag: bool = False
     Comment_replace_n_as_new_line: bool = True
@@ -270,6 +271,7 @@ ScenPart_='''
             'Add_filename_comment': True,
             'Add_comment': True,
             'Comment_add_EN': True,
+            'Comment_Repace_text_by_TODO': False,
             'Comment_starting_similar_as_ogiganal_text': True,
             'Comment_spacing_before_tag': False,
             'Comment_replace_n_as_new_line': False,

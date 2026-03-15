@@ -54,9 +54,9 @@ from Settings_module import SVV as S
 from text2 import add_elts_from_par
 from text2 import find_parents_in_list_of_pathes
 
-Version_of_Text_grabber: str = "1.7.0"
+Version_of_Text_grabber: str = "1.7.2"
 
-DEBUG = False 
+DEBUG = False
 test_mods = r"""
 Pawnmorpher - F:\Games\steamapps\workshop\content\294100\1786466855
 
@@ -78,6 +78,45 @@ def exit_prog():
 
 
 
+translation_dict = {
+    'ru': {
+        'Path to Mod Folder...': 'Путь к моду...',
+        'Fast settings': 'Быстрые настройки',
+        'Pause at the end': 'Пауза в конце',
+        'Show console': 'Показывать консоль',
+        'Update translation': 'Обновить перевод',
+
+        'Translate Updater': 'Translate Updater',
+        'Path to Translated Folder': 'Путь к старому переводу (переведенной папке)',
+        'Path to Grabbed (ready to translate) Mod Folder': 'Путь к только что извлеченной папке',
+        'Run': 'Запустить',
+    },
+    'es': {
+        'Path to Mod Folder...': 'Ruta a la Carpeta del Mod...',
+        'Fast settings': 'Configuración Rápida',
+        'Pause at the end': 'Pausar al Final',
+        'Show console': 'Mostrar Consola',
+        'Update translation': 'Actualizar Traducción',
+
+        'Translate Updater': 'Actualizador de Traducción',
+        'Path to Translated Folder': 'Ruta a la Carpeta Traducida',
+        'Path to Grabbed (ready to translate) Mod Folder': 'Ruta a la Carpeta del Mod Capturado (listo para traducir)',
+        'Run': 'Ejecutar',
+    },
+    'en': {
+        'Path to Mod Folder...': 'Path to Mod Folder...',
+        'Fast settings': 'Fast settings',
+        'Pause at the end': 'Pause at the end',
+        'Show console': 'Show console',
+        'Update translation': 'Update translation',
+
+        'Translate Updater': 'Translate Updater',
+        'Path to Translated Folder': 'Path to Translated Folder',
+        'Path to Grabbed (ready to translate) Mod Folder': 'Path to Grabbed (ready to translate) Mod Folder',
+        'Run': 'Run',
+    },
+
+}
 
 
 include_in_QOL = False
@@ -717,7 +756,12 @@ def main(Inputed_path_to_mod="", qq: queue.Queue = None):
                                 comm = comm.replace('\\n', '\n')
 
                             text_body.append(comm)
-                        text_body.append(f"<{elem.defname}.{elem.path}>{elem.text}</{elem.defname}.{elem.path}>")
+
+                        if S.Comment_Repace_text_by_TODO:
+                            text_body.append(f"<{elem.defname}.{elem.path}>TODO</{elem.defname}.{elem.path}>")
+                        else:
+                            text_body.append(f"<{elem.defname}.{elem.path}>{elem.text}</{elem.defname}.{elem.path}>")
+
 
                 os.makedirs(file_path1, exist_ok=True)
 
@@ -1322,6 +1366,33 @@ Pause_checkbox_var: ttkbootstrap.BooleanVar
 
 class TestApp(ttk_boot.Window):
 
+    def update_language(self):
+        """
+        Обновляет текст всех виджетов в соответствии с текущим языком настроек.
+        """
+        # Получаем текущий словарь переводов
+        # S.Settings_language должен быть обновлен ДО вызова этой функции
+        lang = translation_dict[S.Settings_language]
+
+        # 1. Обновляем заголовок окна (Title Label)
+        # Если название приложения 'Text Grabber' тоже нужно переводить, добавьте ключ в словарь
+        new_title = f"Text Grabber v.{Version_of_Text_grabber}"
+        self.Title_label.config(text=new_title)
+
+        # 2. Обновляем текст кнопки меню (Menubutton)
+        self.menubtn.config(text=lang.get('Fast settings'))
+
+        # 3. Обновляем пункты меню (Menu items)
+        # Пункты меню имеют индексы. 0 - первый добавленный элемент, 1 - второй.
+        # Порядок добавления в __init__: 1 (Pause), 2 (Show console).
+        self.menu.entryconfig(0, label=lang.get('Pause at the end'))
+        self.menu.entryconfig(1, label=lang.get('Show console'))
+
+        # 4. Обновляем кнопку обновления перевода
+        self.transalte_update_btn.config(text=lang.get('Update translation'))
+
+        self.path_entry.set(lang.get('Path to Mod Folder...'))
+
     def disable_btns_switch(self, disable: bool):
         if disable:
             for _ in self.btns:
@@ -1358,8 +1429,10 @@ class TestApp(ttk_boot.Window):
 
 
 
-        path_entry = ttk_boot.StringVar(
-            value=(f"Путь к моду..." if S.Settings_language == "ru" else f"Path to Mod Folder..."))
+        self.path_entry = ttk_boot.StringVar(
+            value=
+            translation_dict[S.Settings_language].get('Path to Mod Folder...')
+        )
 
         self.option_add("*tearOff", False)
         # set overrideredirect to True to remove the windows default decorators
@@ -1399,7 +1472,7 @@ class TestApp(ttk_boot.Window):
         self.Main_frame = ttk_boot.Frame(self.Content_frame)
         self.Main_frame.pack(expand=True, fill='x', anchor='nw')
 
-        self.Enter_textbox = ttk_boot.Entry(self.Main_frame, textvariable=path_entry, width=50,
+        self.Enter_textbox = ttk_boot.Entry(self.Main_frame, textvariable=self.path_entry, width=50,
                                             foreground=WindowSettings.color3_Grey)
 
         def on_entry_click(*_):
@@ -1419,7 +1492,7 @@ class TestApp(ttk_boot.Window):
                 self.Enter_textbox.delete(0, ttk_boot.END)
 
         self.Enter_textbox.bind("<Control-KeyPress>", keypress)
-        self.Enter_textbox.bind('<Return>', lambda _: run_main(path_entry.get()))
+        self.Enter_textbox.bind('<Return>', lambda _: run_main(self.path_entry.get()))
         self.Enter_textbox.pack(fill='y', side='left', )
         self.Enter_textbox.event_add('<<Paste>>', '<Control-igrave>')
 
@@ -1440,7 +1513,7 @@ class TestApp(ttk_boot.Window):
         self.Main_frame2.pack(expand=True, fill='x', anchor='nw', )
         # noinspection PyArgumentList
         self.menubtn = ttk_boot.Menubutton(self.Main_frame2,
-                                           text=(f"Быстрые настройки" if S.Settings_language == "ru" else f"Fast settings"),
+                                           text=translation_dict[S.Settings_language].get('Fast settings'),
                                            bootstyle="outline", )
 
         self.menu = ttk_boot.Menu(self.menubtn)
@@ -1454,9 +1527,9 @@ class TestApp(ttk_boot.Window):
 
         ch_style = {'selectcolor': WindowSettings.color_yellow_meadow, 'foreground': WindowSettings.Title_font_color}
         fast_checkbuttons = {
-            1: {'label': (f"Пауза по завершению" if S.Settings_language == "ru" else f"Pause at the end"),
+            1: {'label': translation_dict[S.Settings_language].get('Pause at the end'),
                 'variable': Pause_checkbox_var},
-            2: {'label': (f"Показывать консоль" if S.Settings_language == "ru" else f"Show console"),
+            2: {'label': translation_dict[S.Settings_language].get('Show console'),
                 'variable': Show_console_checkbox_var, 'command': Show_console_checkbox_var_toggle},
 
         }
@@ -1491,10 +1564,10 @@ class TestApp(ttk_boot.Window):
             # Window_Text_grabber.withdraw()
             raise_console(True)
 
-            Translate_updater_xml_old_to_new.run_from_main_prog(Window_Text_grabber, S.Settings_language)
+            Translate_updater_xml_old_to_new.run_from_main_prog(Window_Text_grabber, translation_dict[S.Settings_language])
 
 
-        self.transalte_update_btn = ttk_boot.Button(self.Main_frame2, text='Update translation' if S.Settings_language != 'ru' else 'Обновить перевод',
+        self.transalte_update_btn = ttk_boot.Button(self.Main_frame2, text=translation_dict[S.Settings_language].get('Update translation'),
                                                     command=lambda: run_translate_update_gui())
         self.transalte_update_btn.pack(anchor='nw', side='right', expand=False, pady=(5, 0), padx=(5,5), ipady=7)
 
@@ -1682,8 +1755,6 @@ if __name__ == '__main__':
         windll.user32.SetForegroundWindow(hwnd)
 
 
-
-
     raise_console(False)
     Window_Text_grabber = TestApp()
 
@@ -1735,6 +1806,7 @@ if __name__ == '__main__':
 
     # Window_Text_grabber.after(1000, lambda: update_settings())
     Window_Text_grabber.mainloop()
+
 
 
 

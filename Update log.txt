@@ -1,5 +1,11 @@
 Update log
 
+	TODO: Заменить на TODO
+
+
+
+
+
 	TODO: Try grab many mods at once
 	TODO: Check riot sheld CE
 	TODO: Updater - many languages and from integrated translation check
@@ -8,6 +14,11 @@ Update log
 	TODO: Grab Non English text without spaces
 	TODO: search XmlExtensions.FindMod by     <packageId>default = false</packageId>
 	TODO: Settings_module line 352, Ошибка чтения 
+
+Update 1.7.1
+    Added option "Replace text to TODO"
+    Added spanish translation
+
 
 Update 1.7.0
     Fixed letterLabel and letterText in QuestScriptDef
