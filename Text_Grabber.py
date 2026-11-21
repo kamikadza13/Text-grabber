@@ -37,6 +37,7 @@ import Get_database_by_list_of_pathes_of_mods
 import Text_grabber_settings
 import Translate_updater_xml_old_to_new
 import image_edit
+from ErrorLogger import logger
 from Finish_string_module import finish_string
 from Get_required_packageIds_and_modNames import get_required_packageIds_and_modNames_func
 from Get_searching_folders import get_searching_folders_with_reqires
@@ -44,17 +45,17 @@ from GlobFunc import escape_printy_string, error_handler, no_comment_parser
 from GlobVars import Error_log
 from GlobVars import folders
 from GlobVars import mod_data
-from GlobVars import queueData
+from GlobVars import queue_data
 from GlobVars import state
 from GlobVars import tf
 from Patch_copy_module import find_patches_with_text
 from Patch_processing import patches
 from Read_about import reading_about
-from Settings_module import SVV as S
+from Settings_module import SVV as S, SVV
 from text2 import add_elts_from_par
 from text2 import find_parents_in_list_of_pathes
 
-Version_of_Text_grabber: str = "1.7.2"
+Version_of_Text_grabber: str = "1.7.6"
 
 DEBUG = False
 test_mods = r"""
@@ -388,8 +389,8 @@ def main(Inputed_path_to_mod="", qq: queue.Queue = None):
 
     validate_folder_throw_about(Fullpath, qq)
 
-    if queueData.new_Fullpath:
-        Fullpath = queueData.new_Fullpath
+    if queue_data.new_fullpath:
+        Fullpath = queue_data.new_fullpath
         printy(f'\tNEW', 'r', end='')
         printy(f'\t Work directory: "{Fullpath}"', 'n')
 
@@ -476,31 +477,31 @@ def main(Inputed_path_to_mod="", qq: queue.Queue = None):
     if folders.def_folders:
         printy(f'\t\tDefs in: {escape_printy_string(folders.def_folders)}', 'o')
         printy('\t\tFiles in Defs:', 'o')
-        tf.Defs = make_files_path_to_translate(folders.def_folders)
+        tf.defs = make_files_path_to_translate(folders.def_folders)
 
     if folders.keyed_folders:
         printy(f'\t\tKeyed in: {escape_printy_string(folders.keyed_folders)}', 'o')
         printy('\t\tFiles in Keyed:', 'o')
-        tf.Keyed = make_files_path_to_translate(folders.keyed_folders)
+        tf.keyed = make_files_path_to_translate(folders.keyed_folders)
 
     if folders.strings_folders:
         printy(f'\t\tStrings in: {escape_printy_string(folders.strings_folders)}', 'o')
         printy('\t\tFiles in Strings:', 'o')
-        tf.Strings = make_files_path_to_translate(folders.strings_folders)
+        tf.strings = make_files_path_to_translate(folders.strings_folders)
 
     # if patches_defs_pathes:
     #     print("Patches Defs ", list(patches_defs_pathes))
-    #     print('tf.Defs.update(patches_defs_pathes)')
-    #     print(tf.Defs)
-    #     tf.Defs.update(patches_defs_pathes)
-    #     print(tf.Defs)
+    #     print('tf.defs.update(patches_defs_pathes)')
+    #     print(tf.defs)
+    #     tf.defs.update(patches_defs_pathes)
+    #     print(tf.defs)
 
     # tf.Patches = make_files_path_to_translate([Path('_Translation/Grabbed_Defs_from_patches')])
 
     if folders.patches_defs:
         # print("Patches Defs ", list(folders.patches_defs))
-        tf.Defs.update(folders.patches_defs)
-        # print(tf.Defs)
+        tf.defs.update(folders.patches_defs)
+        # print(tf.defs)
 
 
     print()
@@ -508,7 +509,7 @@ def main(Inputed_path_to_mod="", qq: queue.Queue = None):
 
 
 
-    # find_parent_elems_in_file_path_list(tf.Defs)
+    # find_parent_elems_in_file_path_list(tf.defs)
 
     def add_in_queue(type_str:str = 'PROGRESS', message=1):
         qq.put((type_str, message))
@@ -519,7 +520,7 @@ def main(Inputed_path_to_mod="", qq: queue.Queue = None):
     printy("Searching parents", 'n')
 
     'Add translated mod parents pathes'
-    parent_xml_pathes = [d for d in tf.Defs]
+    parent_xml_pathes = [d for d in tf.defs]
     """List of parent pathes"""
 
     'Add Data parents pathes'
@@ -556,20 +557,13 @@ def main(Inputed_path_to_mod="", qq: queue.Queue = None):
 
     printy("Updating parent dict ", 'n')
 
-    tf.Parent_list = find_parents_in_list_of_pathes(parent_xml_pathes)
+    tf.parent_list = find_parents_in_list_of_pathes(parent_xml_pathes)
     """{name: elem}"""
     printy("\nUpdating parent dict... Done ", 'n')
 
 
     add_in_queue(message=30)
 
-    # if DEBUG:
-    #     print("tf.Parent_list = ", end='')
-    #     pprint(tf.Parent_list)
-    #
-    #     for l in tf.Parent_list:
-    #         print(l)
-    #         ET.dump(tf.Parent_list[l])
 
 
     print()
@@ -586,37 +580,47 @@ def main(Inputed_path_to_mod="", qq: queue.Queue = None):
             ParentName = r.get('ParentName')
             if ParentName is None:
                 continue
-            if ParentName not in tf.Parent_list:
+            if ParentName not in tf.parent_list:
                 print("Не найден родитель", ParentName)
 
                 continue
-            if r.tag != tf.Parent_list[ParentName].tag:
-                if S.Game_language == "Russian":
-                    Error_log.append(f"Файл: {fil}\n"
-                                     f"Класс родителя отличается от Класса наследника\n"
-                                     f"{r.tag} {r.attrib} and {tf.Parent_list[ParentName].tag} {tf.Parent_list[ParentName].attrib}\n"
-                                     f"Это не критическая ошибка. Но, возможно, придется переместить файл в папку, соответствующую классу родителя\n")
-                else:
-                    Error_log.append(f"File: {fil}\n"
-                                     f"The class of the parent differs from the class of the heir\n"
-                                     f"{r.tag} {r.attrib} and {tf.Parent_list[ParentName].tag} {tf.Parent_list[ParentName].attrib}\n"
-                                     f"That is not critical error. But you may have to move the file to the folder corresponding to the parent class.\n")
+            if r.tag != tf.parent_list[ParentName].tag:
 
-            # print(f"Добавляются элементы из родителя {[x.tag for x in tf.Parent_list[ParentName]]} в:")
+                mes = {
+'ru': "Класс родителя отличается от Класса наследника.",
+'en': "The parent class is different from the heir class.",
+'es': "La clase del padre es diferente De la clase del heredero.",
+                }
+
+                sol = {
+'ru': "Возможно перевод не заработает, и придется перенести файл в папку, соответствующую классу родителя.",
+'en': "The translation may not work, and you will have to transfer the file to a folder corresponding to the parent's class.",
+'es': "Es posible que la traducción no funcione y tenga que transferir el archivo a la carpeta correspondiente a la clase principal.",
+
+                }
+
+                logger.add_error(
+                    category=logger.E_Notification,
+                    file_path=f"Folder {r.tag} -> {tf.parent_list[ParentName].tag} | {r.attrib} {tf.parent_list[ParentName].attrib} {str(fil)} ",
+                    message=mes[SVV.Settings_language],
+                    solution=sol[SVV.Settings_language],
+                )
+
+            # print(f"Добавляются элементы из родителя {[x.tag for x in tf.parent_list[ParentName]]} в:")
             # ET.dump(r)
 
-            add_elts_from_par(r, tf.Parent_list[ParentName], DEBUG_current_element=DEBUG_current_element, change_current_bool=True, )
+            add_elts_from_par(r, tf.parent_list[ParentName], DEBUG_current_element=DEBUG_current_element, change_current_bool=True, )
 
-            # for elements_in_parent_Def in reversed([j for j in tf.Parent_list[ParentName]]):
+            # for elements_in_parent_Def in reversed([j for j in tf.parent_list[ParentName]]):
             #     adding_elems(r, elements_in_parent_Def)
             # print(f"Рут после добавления:")
             # ET.dump(r)
             # print(f"{r.tag}.{r.attrib}")
 
-    # print(tf.Defs.keys())
-    for fl_idx, fil in enumerate(tf.Defs):
+    # print(tf.defs.keys())
+    for fl_idx, fil in enumerate(tf.defs):
         try:
-            add_in_queue(message=30 + int(60 * (fl_idx / len(tf.Defs))))
+            add_in_queue(message=30 + int(60 * (fl_idx / len(tf.defs))))
 
 
             # print("     Чтение из ", str(fil))
@@ -664,25 +668,25 @@ def main(Inputed_path_to_mod="", qq: queue.Queue = None):
             for folder_idx, fldr in enumerate(Folders):
                 # print('f1', fldr)
                 # print('fil', fil)
-                # print('tf.Defs', tf.Defs[fil])
+                # print('tf.defs', tf.defs[fil])
 
 
 
 
-                file_path1 = tf.Defs[fil] / fldr
+                file_path1 = tf.defs[fil] / fldr
                 # printy(f"{file_path1=}")
 
                 if S.Not_rename_files:
                     nn = fil.stem
-                    np = (tf.Defs[fil] / fldr / nn).with_suffix('.xml')
+                    np = (tf.defs[fil] / fldr / nn).with_suffix('.xml')
 
                 else:
                     nn = fil.stem + "_" + fldr.rpartition('.')[2].rpartition('_')[2]
-                    np = (tf.Defs[fil] / fldr / nn).with_suffix('.xml')
+                    np = (tf.defs[fil] / fldr / nn).with_suffix('.xml')
 
                 if len(str(np.resolve())) > 240:
                     nn = fil.stem.rpartition(".")[2].rpartition("_")[2] + str(fl_idx) + "_" + str(folder_idx)
-                    np = (tf.Defs[fil] / fldr / nn).with_suffix('.xml')
+                    np = (tf.defs[fil] / fldr / nn).with_suffix('.xml')
 
 
                 printy(
@@ -794,8 +798,18 @@ def main(Inputed_path_to_mod="", qq: queue.Queue = None):
             # print('\n'.Folder_and_text_1[0])
             # print('\n'.join(Folder_and_text_1[1]))
         except etree.ParseError:
-            Error_log.append(
-                "Ошибка чтения " + str(fil) + "\n\n")
+
+            mes = {
+                'ru': "Ошибка чтения файла. Пропуск файла",
+                'en': "File reading error. Skipping a file",
+                'es': "Error al Leer el archivo. Saltar archivo",
+            }
+
+            logger.add_error(
+                category=logger.E_Notification,
+                file_path=str(fil),
+                message=mes[SVV.Settings_language],
+            )
 
             print("Пропуск файла")
             # input("Press Enter to continue")
@@ -806,7 +820,7 @@ def main(Inputed_path_to_mod="", qq: queue.Queue = None):
     print()
 
     printy("Processing Keyed", 'n')
-    for p, np in tf.Keyed.items():
+    for p, np in tf.keyed.items():
         os.makedirs(np, exist_ok=True)
         print("Copy", p, " in ", np)
         shcopy(p, np)
@@ -814,7 +828,7 @@ def main(Inputed_path_to_mod="", qq: queue.Queue = None):
     print()
 
     printy("Processing Strings", 'n')
-    for p, np in tf.Strings.items():
+    for p, np in tf.strings.items():
         os.makedirs(np, exist_ok=True)
         print("Copy", p, " in ", np)
 
@@ -1091,7 +1105,7 @@ def main(Inputed_path_to_mod="", qq: queue.Queue = None):
 
         make_about_folder()
         if S.Image_on_Preview:
-            image_edit.main(str(state.prog / "Images/Preview/New_Image.png"),
+            image_edit.main(str(S.SettingsPath.SettingsPath_AppData / S.SettingsPath.image_preview_path),
                             S.Preview_Position,
                             S.Preview_Offset_x, S.Preview_Offset_y)
 
@@ -1294,10 +1308,34 @@ def main(Inputed_path_to_mod="", qq: queue.Queue = None):
             with open(file_path, encoding='utf-8') as file:
                 content = file.read()
                 if '.0.' in content:
-                    if S.Settings_language == 'ru':
-                        Notification_log.append(f'В патче {file_path} есть <li>. Чтобы правильно перевести необходимо проверить правильно ли земенятся <li> на 0 (Часто это не так).')
-                    else:
-                        Notification_log.append(f'The patch {file_path} has <li>.  To translate correctly it is necessary to check if <li> is correctly grounded to 0 (Often it is not).')
+
+                    mes = {
+                        'ru': "В патче есть <li>. Это увеличивает шанс неправильного пути для перевода.",
+                        'en': "It's probably just a not-fully-deleted mod. If so, it is better to delete the entire folder.",
+                        'es': "Puede que simplemente no sea un mod completamente remoto. Si es así, es mejor eliminar toda la carpeta.",
+
+                    }
+                    sol = {
+                        'ru': "Чтобы правильно перевести необходимо вручную проверить правильность замены <li> на 0\n"
+                              "Вручную открыть патч, посмотреть что он изменяет, потом открыть изменяемый файл, учесть все наследования элементов от родительских классов, и по итогу угадать на какое по счету место <li> будет приходиться текст.\n"
+                              "Или понадеяться, что Translation Report в главном меню игры, подскажет (Это чаще всего работает если установлен мод к которому патч ^_^)",
+                        'en': "In order to translate correctly, you must manually check the correctness of replacing <li> with 0\n"
+                              "Manually open the patch, see what it changes, then open the file being modified, take into account all inheritances of elements from parent classes, and finally guess which place <li> the text will fall into.\n"
+                              "Or hope that the Translation Report in the main menu of the game will tell you (This usually works if a patch is installed. ^_^)",
+                        'es': "Para TRADUCIR correctamente, debe verificar manualmente si <li > se reemplaza correctamente con 0 \n"
+                              "Abra manualmente el parche, vea lo que cambia, luego abra el archivo que se está modificando, tenga en cuenta todas las heredaciones de elementos de las clases principales y, como resultado, adivine en qué lugar <li> caerá el texto.\n"
+                              "O esperar que el informe de traducción en el menú principal del juego le diga (Esto más a menudo funciona si se instala un mod al que el parche ^_^)",
+
+                    }
+
+
+                    logger.add_error(
+                        category=logger.E_Patch_Notification,
+                        file_path=str(file_path),
+                        message=mes[SVV.Settings_language],
+                        solution=sol[SVV.Settings_language],
+                    )
+
 
     @error_handler(error_text='Error: Rename _Translation')
     def rename_Translation_to_New_Name():
@@ -1335,6 +1373,9 @@ def main(Inputed_path_to_mod="", qq: queue.Queue = None):
 
 
 
+    logger.save_report(fr'{sanitize_filename(New_Name)}\\Error_log.txt')
+    if Path.exists(Path(fr'{sanitize_filename(New_Name)}\\Error_log.txt')):
+        os.startfile(fr'{sanitize_filename(New_Name)}\\Error_log.txt')
 
     print("----------------------------------------------")
     print("All done")
@@ -1719,7 +1760,7 @@ class TestApp(ttk_boot.Window):
 
             res = a.result
             if res == button_yes:
-                queueData.new_Fullpath = folder.parent
+                queue_data.new_fullpath = folder.parent
                 os.chdir(folder.parent)
 
 

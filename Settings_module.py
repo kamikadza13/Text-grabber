@@ -1,11 +1,14 @@
 import configparser
 import os.path
+import shutil
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 from typing import List, Any, Dict
 
 import appdirs
+
+from GlobVars import state
 
 
 @dataclass
@@ -17,6 +20,7 @@ class SettingsValues:
         r'''C:\Users\Kamikadza13\AppData\Roaming\Text_grabber'''
         r'%APPDATA%\Text_grabber'
 
+        image_preview_path = Path('Settings') / 'New_image_preview.png'
 
         General_settings_path = Path('Settings') / 'A1_Settings.ini'
         Description = Path('Settings') / 'A2_Description.txt'
@@ -143,7 +147,9 @@ ScenPart_='''
 
 
     #   [General]
+
     Settings_language: str = 'en'
+    """en,ru,es"""
     Game_language: str = 'Russian'
 
     Path_to_Data: str | None = None
@@ -471,13 +477,11 @@ class SettingsLoader:
         r['Forbidden_part_of_tag'] = self.load_list_from_file(
             self.SV.SettingsPath.Forbidden_part_of_tag,
             self.SV.SettingsPath.F2_Forbidden_part_of_tag,
-            str.lower
         )
 
         r['Forbidden_part_of_path'] = self.load_list_from_file(
             self.SV.SettingsPath.Forbidden_part_of_path,
             self.SV.SettingsPath.F3_Forbidden_part_of_path,
-            str.lower
         )
 
         r['Forbidden_text'] = self.load_list_from_file(
@@ -527,7 +531,7 @@ def updating_settings():
     SVV.set('Tkey_system_on', False)
 
 
-    if 'labelKey'.lower() not in SVV.Forbidden_part_of_tag:
+    if 'labelKey' not in SVV.Forbidden_part_of_tag:
         print('labelKey', 'not in Forbidden_part_of_tag, adding...')
         try:
             SVV.Forbidden_part_of_tag.append('labelKey')
@@ -550,6 +554,15 @@ def updating_settings():
             except Exception as ex:
                 print(ex)
 
+
+    new_preview_path = SVV.SettingsPath.SettingsPath_AppData / SVV.SettingsPath.image_preview_path
+
+    if not new_preview_path.exists():
+        old_preview_path = state.prog / "Images/Preview/New_Image.png"
+        if old_preview_path.exists():
+            shutil.copy(old_preview_path, new_preview_path)
+        else:
+            print(r'Error updating preview image - Text_grabber\Images\Preview | AppData\Roaming\Text_grabber\Settings\New_image_preview.png')
 
 
 

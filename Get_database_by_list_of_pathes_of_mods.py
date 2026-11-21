@@ -6,7 +6,9 @@ from Levenshtein import ratio  # Библиотека python-Levenshtein
 from lxml import etree
 from printy import printy
 
+from ErrorLogger import logger
 from GlobFunc import error_handler, no_comment_parser
+from Settings_module import SVV
 from Settings_module import SVV as S
 
 
@@ -18,6 +20,7 @@ class MultiIndexDict:
             db.partial_find(name='combat exten')
             db.fuzzy_find(name='ce')
     """
+
     def __init__(self, case_insensitive_fields=None, fuzzy_fields=None, synonyms=None, partial_match_fields=None):
         self.records = []
         self.indices = {}
@@ -189,7 +192,6 @@ class MultiIndexDict:
         return len(self.records)
 
 
-
 def searching_all_packageIds(mod_path_list, database):
     processed_idx = 0
     for mp in mod_path_list:
@@ -210,10 +212,7 @@ def searching_all_packageIds(mod_path_list, database):
                 print("Bad reading", f, str(ex))
 
 
-
-
 def parse_xml_file(file: Path):
-
     try:
         tree = etree.parse(file, parser=no_comment_parser)
         root = tree.getroot()
@@ -239,13 +238,44 @@ def parse_xml_file(file: Path):
         return results
 
     except Exception as e:
-        print(f"Ошибка в файле {file}: {str(e)}")
+
+        mes = {
+            'ru':"Папка мода существует, но без About.xml\nФайл не может быть прочитан программой. Возможные причины: файл не существует, поврежден, неправильная кодировка.",
+            'en':"The mod folder exists, but without About.xml\nThe file cannot be read by the program. Possible reasons: the file does not exist, is corrupted, or the encoding is incorrect.",
+            'es':"La carpeta mod existe, pero sin About.xml\nEl programa no puede leer el archivo. Posibles motivos: el archivo no existe, está dañado o la codificación es incorrecta.",
+        }
+
+        sol = {
+            'ru':"Это, Возможно, просто не до конца удалённый мод. Если это так, то лучше удалить всю папку.",
+            'en':"It's probably just a not-fully-deleted mod. If so, it is better to delete the entire folder.",
+            'es':"Puede que simplemente no sea un mod completamente remoto. Si es así, es mejor eliminar toda la carpeta.",
+
+        }
 
 
+        # str(e) дает техническую причину (например, "failed to load external entity...")
+        # type(e).__name__ дает имя ошибки (например, "ParseError" или "FileNotFoundError")
+        error_type = type(e).__name__
+        raw_error_msg = str(e)
+
+        clean_msg = raw_error_msg.replace(str(file), "<>")
+        clean_msg = clean_msg.replace(file.as_posix(), "<>")
+
+        clean_msg += '\n' + mes[SVV.Settings_language]
 
 
+        # 4. Добавляем в логгер.
+        # ВАЖНО: error_key=error_type. Это заставит логгер сгруппировать
+        # все файлы с ошибкой "ParseError" в одну запись.
+        logger.add_error(
+            category=logger.E_Notification,
+            file_path=str(file).replace(r'About\About.xml', ''),
+            message=f"{error_type} - {clean_msg}",
+            solution=sol[SVV.Settings_language],
+        )
 
-def get_packageID_names_pathes_database(list_of_folders_to_search_mods:list[Path]):
+
+def get_packageID_names_pathes_database(list_of_folders_to_search_mods: list[Path]):
     """
     MultiIndexDict {'name': str, 'packageid': str, 'path': Path}
             db.find(name='Vanilla Factions Expanded - Ancients')
@@ -254,7 +284,7 @@ def get_packageID_names_pathes_database(list_of_folders_to_search_mods:list[Path
             db.fuzzy_find(name='ce')
     """
     synonyms = {
-        'core': ['rimworld - core',],
+        'core': ['rimworld - core', ],
         "royalty": ["rimworld - royality", "royalty [official dlc]"],
         "ideology": ["rimworld - ideology", 'ideology [official dlc]'],
         "biotech": ["rimworld - biotech", 'biotech [official dlc]'],
@@ -264,17 +294,18 @@ def get_packageID_names_pathes_database(list_of_folders_to_search_mods:list[Path
         "vanilla factions expanded deserters": ["deserters"],
 
     }
+
     @error_handler(error_text="No Data folder")
     def add_data_pathes_in_database(dbb):
         rimworld_data_path = S.Path_to_Data
 
         aa = [
-            ('core',    'Ludeon.RimWorld',          Path(rimworld_data_path) / 'Core'),
-            ('Royalty', 'Ludeon.RimWorld.Royalty',  Path(rimworld_data_path) / 'Royalty'),
-            ('Ideology','Ludeon.RimWorld.Ideology', Path(rimworld_data_path) / 'Ideology'),
-            ('Biotech', 'Ludeon.RimWorld.Biotech',  Path(rimworld_data_path) / 'Biotech'),
-            ('Anomaly', 'Ludeon.RimWorld.Anomaly',  Path(rimworld_data_path) / 'Anomaly'),
-            ('Odyssey', 'Ludeon.RimWorld.Odyssey',  Path(rimworld_data_path) / 'Odyssey'),
+            ('core', 'Ludeon.RimWorld', Path(rimworld_data_path) / 'Core'),
+            ('Royalty', 'Ludeon.RimWorld.Royalty', Path(rimworld_data_path) / 'Royalty'),
+            ('Ideology', 'Ludeon.RimWorld.Ideology', Path(rimworld_data_path) / 'Ideology'),
+            ('Biotech', 'Ludeon.RimWorld.Biotech', Path(rimworld_data_path) / 'Biotech'),
+            ('Anomaly', 'Ludeon.RimWorld.Anomaly', Path(rimworld_data_path) / 'Anomaly'),
+            ('Odyssey', 'Ludeon.RimWorld.Odyssey', Path(rimworld_data_path) / 'Odyssey'),
         ]
         for a in aa:
             name, iid, path = a
@@ -294,6 +325,3 @@ def get_packageID_names_pathes_database(list_of_folders_to_search_mods:list[Path
     # pprint(a1)
 
     return db
-
-
-

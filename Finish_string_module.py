@@ -10,9 +10,9 @@ from typing import Optional
 from lxml import etree as ET, etree
 from lxml.etree import _Element, _Comment
 
+from ErrorLogger import logger
 from GlobFunc import error_handler
-from GlobVars import Error_log
-from Settings_module import SVV as S
+from Settings_module import SVV as S, SVV
 
 tag_endwith_skip = ['\\nodes\\Set\\name', ]
 text_startwith_skip = ['RGB', r'\$', ]
@@ -576,52 +576,48 @@ def BackstoryDef_add_title_short(Def: _Element):
 
     @error_handler(error_text="Error: add_titleFemale")
     def add_titleFemale():
-        if S.add_titleFemale:
-            titleFemale = Def.find('titleFemale')
-            if titleFemale is None:
-                title = Def.find('title')
-                if title is not None:
-                    titleFemale = etree.Element('titleFemale')
-                    titleFemale.text = title.text
-                    Def.insert(get_index_of_children(Def, title) + 1, titleFemale)
+        if not S.add_titleFemale: return
+        if Def.find('titleFemale') is not None: return
+
+
+        title = Def.find('title')
+        if title is not None:
+            titleFemale = etree.Element('titleFemale')
+            titleFemale.text = title.text
+            Def.insert(get_index_of_children(Def, title) + 1, titleFemale)
 
     add_titleFemale()
 
 
     @error_handler(error_text="Error: add_titleShortFemale")
     def add_titleShortFemale():
-        if S.add_titleShortFemale:
-            titleShortFemale = Def.find('titleShortFemale')
-            if titleShortFemale is None:
-                titleShort = Def.find("titleShort")
-                if titleShort is not None:
-                    titleShortFemale = etree.Element('titleShortFemale')
-                    titleShortFemale.text = titleShort.text
-                    Def.insert(get_index_of_children(Def, titleShort) + 1, titleShortFemale)
+        if not S.add_titleShortFemale: return
+        if Def.find('titleShortFemale') is not None: return
 
 
-            else:
-                title = Def.find('title')
-                if title is not None:
-                    titleShortFemale = etree.Element('titleShortFemale')
-                    if len(title.text) < 13:
-                        titleShortFemale.text = title.text
-                    else:
-                        titleShortFemale.text = title.text[:12]
 
-                    Def.insert(get_index_of_children(Def, title) + 1, titleShortFemale)
+        titleShort = Def.find("titleShort")
+        if titleShort is not None:
+            titleShortFemale = etree.Element('titleShortFemale')
+            titleShortFemale.text = titleShort.text
+            Def.insert(get_index_of_children(Def, titleShort) + 1, titleShortFemale)
+        else:
+            title = Def.find('title')
+            if title is None:
+                return
+            titleShortFemale = etree.Element('titleShortFemale')
+            titleShortFemale.text = title.text[:12]
+            Def.insert(get_index_of_children(Def, title) + 1, titleShortFemale)
 
     add_titleShortFemale()
 
 @error_handler(error_text="Error: backstoryDef baseDesc")
 def backstoryDef_baseDesc_to_description(Def):
     baseDesc = Def.find('baseDesc')
-    if baseDesc is None:
-        return
+    if baseDesc is None: return
 
     description = Def.find('description')
-    if description is not None:
-        return
+    if description is not None: return
 
     description = etree.Element('description')
     description.text = baseDesc.text
@@ -1098,6 +1094,7 @@ def adding_in_string(folder: str, defname: str, path_list: list[str], elem: _Ele
         debug_print()
 
     elemtag = elem.tag.lower()
+    elemtag_not_lower = elem.tag
 
     if not path_list:
         print('elem_path Пустой -> defname не найден')
@@ -1118,7 +1115,24 @@ def adding_in_string(folder: str, defname: str, path_list: list[str], elem: _Ele
         if match(r"\d", defname):
             print('Skip: Defname start with digit - that cause XML error', defname)
 
-            Error_log.append(f"Defname start with digit - that cause XML error: {folder, defname, path_list}")
+            mes = {
+                'ru': "Defname начинается с цифры - это приводит к ошибке XML.",
+                'en': "Defname start with digit - that cause XML error",
+                'es': "Defname comience con un dígito que cause un error XML"}
+
+            sol = {
+                'ru': "Сообщить автору, об этом, чтобы он заменил defname..",
+                'en': "Inform the author about this so that he replaces the defname.",
+                'es': "Informe al autor sobre esto para que reemplace el defname.",
+
+            }
+
+            logger.add_error(
+                category=logger.E_Notification,
+                file_path=str(f"{folder, defname, path_list}"),
+                message=mes[SVV.Settings_language],
+                solution=sol[SVV.Settings_language],
+            )
             return None
 
 
@@ -1179,10 +1193,18 @@ def adding_in_string(folder: str, defname: str, path_list: list[str], elem: _Ele
         return None
 
     # print(S.Forbidden_part_of_tag)
-    # print(elem.tag)
+    # print(elemtag_not_lower)
     for fp in S.Forbidden_part_of_tag:
-        if fp in elemtag:
+        if fp in elemtag_not_lower:
+            print('Forbidden part of TAG', fp)
+            return None
 
+
+    # print(S.Forbidden_part_of_path)
+    # print(finished_path)
+    for fp in S.Forbidden_part_of_path:
+        if fp in finished_path:
+            print('Forbidden part of PATH', fp)
             return None
 
 

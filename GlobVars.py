@@ -1,77 +1,78 @@
-# GlobVars.py
-import dataclasses
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Dict, Tuple, List
+# GlobVars.py — Глобальное состояние приложения Text_grabber
 
-from lxml import etree
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Dict, Tuple, List, Any
+
 
 Error_log = []
 
 
 @dataclass
 class QueueData:
-    ''
-
-    new_Fullpath = ''
-    "change_to_mod_dir"
+    """Данные для передачи между потоками и GUI."""
+    new_fullpath: str = ""
+    """change_to_mod_dir Путь, который нужно установить как текущую папку мода."""
 
 @dataclass
 class ModData:
-    name = "Default name"
-    packageId = "default.id"
-    author = 'Default Autor'
-    url = ''
-    supportedVersions = ''
-    description = 'Default description'
+    """Метаданные парсинга мода из About.xml и PublishedFileId.txt."""
+    name: str = "Default name"
+    package_id: str = "default.id"
+    author: str = "Default Author"
+    url: str = ""
+    supported_versions: str = ""
+    description: str = "Default description"
 
-    modDependencies: dict = dataclasses.field(default_factory=dict)
-    """dependence_dict{'packageId'; displayName}"""
-    loadafter_list: list = dataclasses.field(default_factory=list)
-    max_version = 'v1.5'
-    max_version_by_folders = '0.1'
-    max_version_by_Loadfolders = 'v0.1'
+    mod_dependencies: Dict[str, str] = field(default_factory=dict)
+    """Словарь зависимостей мода: {packageId: displayName}."""
+    loadafter_list: List[str] = field(default_factory=list)
+
+    max_version: str = "v1.5"
+    max_version_by_folders: str = "0.1"
+    max_version_by_Loadfolders: str = "v0.1"
+
 
 
 @dataclass
 class AppState:
-    exit_string: list = dataclasses.field(default_factory=list)
-    current_folder: str = ""
-    error_log: list = dataclasses.field(default_factory=list)
-    parent_names: list = dataclasses.field(default_factory=list)
-
+    error_log: List[Any] = field(default_factory=list)
     prog = Path.cwd()
 
-    new_loadfolder_pathes: list = dataclasses.field(default_factory=list)
-    f'<li>...</li>\n\t\t'
+    new_loadfolder_pathes: List[Path] = field(default_factory=list)
+    """<li>...</li>\n\t\t"""
 
-    mods_folders: Dict[Tuple, Dict[Path, List[str]]] = dataclasses.field(default_factory=dict)
-    '''
+
+    # Словарь всех модов и их папок:
+    #   { (required_mod, ...): { Path: [text1, text2, ...] } }
+    mods_folders: Dict[Tuple[str, ...], Dict[Path, List[str]]] = field(default_factory=dict)
+    """
     -----{
     -----(req mods): 
     ---------{Path:
     ------------text1, text2]
     ---------}
     -----}
-    '''
+    """
 
-    keyed_from_patches: dict[Path, list[str]] = dataclasses.field(default_factory=dict)
+    keyed_from_patches: Dict[Path, List[str]] = field(default_factory=dict)
 
 
 @dataclass
-class A1:
-    searching_pathes: dict[Path, Tuple] = dataclasses.field(default_factory=dict)
+class FolderData:
+    """Результаты сканирования файловой структуры мода."""
+    searching_pathes: Dict[Path, Tuple[str, ...]] = field(default_factory=dict)
+    def_folders: List[Path] = field(default_factory=list)
+    lang_folders: List[Path] = field(default_factory=list)
 
-    def_folders: list[Path] = dataclasses.field(default_factory=list)
-    lang_folders: list[Path] = dataclasses.field(default_factory=list)
-    patches_folders: dict[Path, Tuple] = dataclasses.field(default_factory=dict)
-    'path , (required mods...)'
+    patches_folders: Dict[Path, Tuple[str, ...]] = field(default_factory=dict)
+    """path -> (required mods...)"""
 
-    keyed_folders: list[Path] = dataclasses.field(default_factory=list)
-    strings_folders: list[Path] = dataclasses.field(default_factory=list)
+    keyed_folders: List[Path] = field(default_factory=list)
+    strings_folders: List[Path] = field(default_factory=list)
 
-    patches_defs: dict[Path, Path] = dataclasses.field(default_factory=dict)
-    patches_pathes: dict[Path, Path] = dataclasses.field(default_factory=dict)
+    patches_defs: Dict[Path, Path] = field(default_factory=dict)
+    patches_pathes: Dict[Path, Path] = field(default_factory=dict)
 
 
 
@@ -80,18 +81,26 @@ class A1:
 
 @dataclass
 class TranslatingFiles:
-    Defs: dict[Path, Path] = dataclasses.field(default_factory=dict)
-    Keyed: dict[Path, Path] = dataclasses.field(default_factory=dict)
-    Strings: dict[Path, Path] = dataclasses.field(default_factory=dict)
-
-    Parent_list: dict[str, list[etree.Element]] = dataclasses.field(default_factory=dict)
-    '''par_list[name] = list(Elements)'''
 
 
 
-state = AppState()
-mod_data = ModData()
-folders = A1()
-tf = TranslatingFiles()
-queueData = QueueData()
 
+    """Маппинг файлов Defs/Keyed/Strings и список родителей."""
+    defs: Dict[Path, Path] = field(default_factory=dict)
+    keyed: Dict[Path, Path] = field(default_factory=dict)
+    strings: Dict[Path, Path] = field(default_factory=dict)
+
+    parent_list: Dict[str, list] = field(default_factory=dict)
+    """par_list[name] = list(Elements)
+    Словарь родителей: {name: [Element, ...]}.
+    Тип Element — lxml.etree._Element, но указан как list для избежания
+    тяжёлого импорта lxml при каждом обращении к GlobVars."""
+
+
+
+
+state: AppState = AppState()
+mod_data: ModData = ModData()
+folders: FolderData = FolderData()
+tf: TranslatingFiles = TranslatingFiles()
+queue_data: QueueData = QueueData()

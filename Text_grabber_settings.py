@@ -1148,8 +1148,9 @@ class PreviewFrame(Frame):
             file = filedialog.askopenfile(filetypes=[('Png Images', '*.png')])
             if file is not None:
                 file = file.name.replace('\\', '/')
-                if file != r"Images\\Preview\\New_Image.png":
-                    shutil.copy(file, r"Images\\Preview\\New_Image.png")
+                np = SV.SettingsPath.SettingsPath_AppData / SV.SettingsPath.image_preview_path
+                if file != np:
+                    shutil.copy(file, np)
 
             Preview_image_chage()
 
@@ -1247,9 +1248,12 @@ class PreviewFrame(Frame):
         def Preview_image_chage():
 
             if self.Image_on_Preview.get():
-                image_edit.add_custom_labe_on_preview(r"Images\\Preview\\Preview_origianl.png",
-                                                      r"Images\\Preview\\New_Image.png",
-                                                      self.Position.get(), SV.Preview_Offset_x, SV.Preview_Offset_y).save(r'Images\\Preview\\Preview_updated.png')
+                image_edit.add_custom_labe_on_preview(
+                    r"Images\\Preview\\Preview_origianl.png",
+                    SV.SettingsPath.SettingsPath_AppData / SV.SettingsPath.image_preview_path,
+                    self.Position.get(),
+                    SV.Preview_Offset_x,
+                    SV.Preview_Offset_y).save(r'Images\\Preview\\Preview_updated.png')
 
                 self.self_image_updated = PhotoImage(file=r'Images\\Preview\\Preview_updated.png')
 

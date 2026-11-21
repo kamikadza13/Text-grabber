@@ -36,7 +36,7 @@ def get_supportedVersions(root3):
 def get_modDependencies(root3):
     """dependence_dict{'packageId':displayName,}"""
     dependence_dict = {}
-    dependencies_list : List[_Element] = []
+    dependencies_list: List[_Element] = []
     for data in root3:
         if data.tag.lower() == "moddependencies":
             dependencies_list = [li for li in data]

@@ -1,6 +1,8 @@
 Update log
 
-	TODO: Заменить на TODO
+	TODO: сделать поддержку Превью и в jpg, а не только png
+	TODO: Улучшить Выбор папки мода. Сделать предупреждение, что папка не существует
+
 
 
 
@@ -13,7 +15,14 @@ Update log
 	TODO: Check hackingStralth in ushanka hacking
 	TODO: Grab Non English text without spaces
 	TODO: search XmlExtensions.FindMod by     <packageId>default = false</packageId>
-	TODO: Settings_module line 352, Ошибка чтения 
+	TODO: Settings_module line 352, Ошибка чтения
+
+Update 1.7.3
+    Added support for Preview.jpg/jpeg. Why do that?
+    Move Image preview to settings folder (Previously, it was not saved between versions. Probably. But no one told me about it. Doesn't anyone use adding pictures to previews?)
+
+Update 1.7.2
+    Bugfix
 
 Update 1.7.1
     Added option "Replace text to TODO"

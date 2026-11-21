@@ -63,9 +63,18 @@ def patches(db:MultiIndexDict):
         # print('mf: ', mf)
         # print(state.mods_folders[mf])
         mod_folder_name_req_from_tuple = sub('[^0-9a-zA-Z]+', '_', str(mf[0])) if mf else ""
+        if len(mod_folder_name_req_from_tuple) > 90:
+            mod_folder_name_req_from_tuple = mod_folder_name_req_from_tuple[:90]
+        mod_folder_name_req_from_tuple = mod_folder_name_req_from_tuple.rstrip(' .')
         new_grabbed_folder_path = Path('_Translation') / 'Grabbed_Defs_from_patches' / mod_folder_name_req_from_tuple
         # print(new_grabbed_folder_path)
-        os.makedirs(new_grabbed_folder_path, exist_ok=True)
+        try:
+            os.makedirs(new_grabbed_folder_path, exist_ok=True)
+        except OSError as e:
+            print(f"Ошибка при создании папки: {e}")
+            new_grabbed_folder_path = Path('_Translation') / 'Grabbed_Defs_from_patches' / mod_folder_name_req_from_tuple[:50]
+            os.makedirs(new_grabbed_folder_path, exist_ok=True)
+            print(f"Создана папка с коротким именем: {new_grabbed_folder_path}")
 
         for filepath in state.mods_folders[mf]:
 

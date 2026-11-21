@@ -274,7 +274,6 @@ def add_elts_from_par(current_root: _Element, parent_root: _Element, DEBUG_curre
         print("Error add_elts_from_parent")
         etree.dump(parent_root)
         etree.dump(current_root)
-        input()
 
 
 
